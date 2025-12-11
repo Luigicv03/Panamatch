@@ -19,7 +19,7 @@ import chatRoutes from './routes/chatRoutes';
 import mediaRoutes from './routes/mediaRoutes';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 const httpServer = createServer(app);
 
 // Configurar CORS - Permitir conexiones desde cualquier origen en desarrollo
@@ -68,8 +68,10 @@ app.get('/health', (req, res) => {
 // Si usamos GCS, las imágenes se sirven directamente desde Google Cloud Storage
 import { storageService } from './services/storageService';
 
+let uploadsPath: string | undefined;
+
 if (!storageService.isUsingGCS()) {
-  const uploadsPath = process.env.IMAGE_STORAGE_PATH || path.join(__dirname, '../uploads');
+  uploadsPath = process.env.IMAGE_STORAGE_PATH || path.join(__dirname, '../uploads');
   console.log('📁 Ruta de uploads configurada:', uploadsPath);
   console.log('📁 Ruta absoluta de uploads:', path.resolve(uploadsPath));
 
@@ -93,8 +95,12 @@ if (!storageService.isUsingGCS()) {
   console.log('☁️  Usando Google Cloud Storage - archivos estáticos se sirven desde GCS');
 }
 
-// Endpoint de prueba para verificar archivos
+// Endpoint de prueba para verificar archivos (solo si no usamos GCS)
 app.get('/test-uploads', (req, res) => {
+  if (!uploadsPath) {
+    return res.json({ message: 'Usando Google Cloud Storage - este endpoint no está disponible' });
+  }
+  
   const avatarsPath = path.join(uploadsPath, 'avatars');
   const messagesPath = path.join(uploadsPath, 'messages');
   

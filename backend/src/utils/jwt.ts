@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserPayload } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -9,13 +9,13 @@ const REFRESH_EXPIRES_IN = process.env.REFRESH_EXPIRES_IN || '7d';
 export const generateAccessToken = (payload: UserPayload): string => {
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  } as SignOptions);
 };
 
 export const generateRefreshToken = (payload: UserPayload): string => {
   return jwt.sign(payload, REFRESH_SECRET, {
     expiresIn: REFRESH_EXPIRES_IN,
-  });
+  } as SignOptions);
 };
 
 export const verifyAccessToken = (token: string): UserPayload => {

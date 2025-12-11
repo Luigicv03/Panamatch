@@ -78,9 +78,7 @@ export const createProfile = async (
 
     // Validar y convertir fecha de nacimiento
     let birthDate: Date;
-    if (validatedData.dateOfBirth instanceof Date) {
-      birthDate = validatedData.dateOfBirth;
-    } else if (typeof validatedData.dateOfBirth === 'string') {
+    if (typeof validatedData.dateOfBirth === 'string') {
       // Intentar parsear la fecha
       birthDate = new Date(validatedData.dateOfBirth);
       // Verificar que la fecha sea válida
