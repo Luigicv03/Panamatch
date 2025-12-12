@@ -124,7 +124,6 @@ class StorageService {
         contentType: this.getContentType(filename),
         cacheControl: 'public, max-age=31536000',
       },
-      public: true,
     });
 
     return new Promise((resolve, reject) => {
@@ -133,9 +132,16 @@ class StorageService {
         reject(error);
       });
 
-      stream.on('finish', () => {
-        const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
-        resolve(publicUrl);
+      stream.on('finish', async () => {
+        try {
+          await file.makePublic();
+          const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
+          resolve(publicUrl);
+        } catch (makePublicError: any) {
+          console.error('Error al hacer público el archivo:', makePublicError.message);
+          const publicUrl = `https://storage.googleapis.com/${this.bucketName}/${filePath}`;
+          resolve(publicUrl);
+        }
       });
 
       stream.end(fileBuffer);
