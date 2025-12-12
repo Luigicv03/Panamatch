@@ -16,16 +16,9 @@ class StorageService {
       process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64
     );
 
-    console.log('🔍 Verificando configuración de GCS:', {
-      hasProjectId,
-      hasBucketName,
-      hasCredentials,
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
-      hasCredentialsJSON: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
-      hasCredentialsBase64: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64,
-      hasCredentialsFile: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
-    });
+    if (hasProjectId && hasBucketName && hasCredentials) {
+      console.log('Google Cloud Storage configurado');
+    }
 
     this.useGCS = !!(hasProjectId && hasBucketName && hasCredentials);
 
@@ -37,7 +30,6 @@ class StorageService {
           try {
             let jsonString = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
             
-            // Si el JSON está envuelto en comillas simples, removerlas
             if (jsonString.startsWith("'") && jsonString.endsWith("'")) {
               jsonString = jsonString.slice(1, -1);
             }
@@ -45,24 +37,10 @@ class StorageService {
               jsonString = jsonString.slice(1, -1);
             }
             
-            // Reemplazar \n literales por saltos de línea reales
             jsonString = jsonString.replace(/\\n/g, '\n');
-            
-            console.log('📝 Intentando parsear GOOGLE_APPLICATION_CREDENTIALS_JSON, longitud:', jsonString.length);
-            console.log('📝 Primeros 200 caracteres:', jsonString.substring(0, 200));
-            
             credentials = JSON.parse(jsonString);
-            
-            console.log('✅ Credenciales parseadas correctamente desde GOOGLE_APPLICATION_CREDENTIALS_JSON');
-            console.log('✅ Tipo de credenciales:', credentials.type);
-            console.log('✅ Project ID en credenciales:', credentials.project_id);
           } catch (parseError: any) {
-            console.error('❌ Error al parsear GOOGLE_APPLICATION_CREDENTIALS_JSON:', {
-              message: parseError.message,
-              errorPosition: parseError.message.match(/position (\d+)/)?.[1],
-              stack: parseError.stack,
-              jsonPreview: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.substring(0, 200),
-            });
+            console.error('Error al parsear GOOGLE_APPLICATION_CREDENTIALS_JSON:', parseError.message);
           }
         }
 
@@ -76,19 +54,25 @@ class StorageService {
         }
 
         if (!credentials && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-          if (fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+          let credsString = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+          
+          if (fs.existsSync(credsString)) {
             try {
-              credentials = JSON.parse(
-                fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8')
-              );
-            } catch (fileError) {
-              console.error('Error al leer archivo de credenciales:', fileError);
+              credentials = JSON.parse(fs.readFileSync(credsString, 'utf8'));
+            } catch (fileError: any) {
+              console.error('Error al leer archivo de credenciales:', fileError.message);
             }
           } else {
             try {
-              credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
-            } catch (jsonError) {
-              console.warn('GOOGLE_APPLICATION_CREDENTIALS no es válido');
+              if ((credsString.startsWith("'") && credsString.endsWith("'")) ||
+                  (credsString.startsWith('"') && credsString.endsWith('"'))) {
+                credsString = credsString.slice(1, -1);
+              }
+              
+              credsString = credsString.replace(/\\n/g, '\n');
+              credentials = JSON.parse(credsString);
+            } catch (jsonError: any) {
+              console.error('Error al parsear GOOGLE_APPLICATION_CREDENTIALS como JSON:', jsonError.message);
             }
           }
         }
@@ -97,30 +81,15 @@ class StorageService {
           throw new Error('No se pudieron cargar las credenciales de Google Cloud');
         }
 
-        console.log('🔧 Inicializando Google Cloud Storage con:', {
-          projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-          bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
-          hasCredentials: !!credentials,
-          credentialsType: credentials.type,
-          credentialsProjectId: credentials.project_id,
-        });
-
         this.gcs = new Storage({
           projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
           credentials: credentials,
         });
         this.bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME!;
-        
-        console.log('✅ Google Cloud Storage inicializado correctamente');
       } catch (error: any) {
-        console.error('❌ Error al inicializar Google Cloud Storage:', {
-          message: error.message,
-          stack: error.stack,
-        });
+        console.error('Error al inicializar Google Cloud Storage:', error.message);
         this.useGCS = false;
       }
-    } else {
-      console.log('⚠️  Google Cloud Storage no está configurado, usando almacenamiento local');
     }
   }
 
@@ -183,13 +152,11 @@ class StorageService {
     const subDir = type === 'message' ? 'messages' : 'avatars';
     const fullPath = path.join(absoluteUploadPath, subDir, filename);
 
-    // Crear directorio si no existe
     const dirPath = path.dirname(fullPath);
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
     }
 
-    // Escribir archivo
     fs.writeFileSync(fullPath, fileBuffer);
 
     return `/uploads/${subDir}/${filename}`;
