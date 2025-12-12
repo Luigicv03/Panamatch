@@ -137,36 +137,11 @@ export default function SwipeCard({
         </Animated.View>
 
         {/* Imagen de perfil */}
-        {(() => {
-          const imageUri = getAvatarUrl(profile.avatarUrl);
-          console.log('🖼️ SwipeCard - Cargando imagen:', {
-            profileId: profile.id,
-            profileName: `${profile.firstName} ${profile.lastName}`,
-            avatarUrl: profile.avatarUrl,
-            imageUri,
-            hasAvatarUrl: !!profile.avatarUrl,
-          });
-          return (
-            <Image
-              source={{ uri: imageUri }}
-              style={styles.image}
-              resizeMode="cover"
-              onError={(error) => {
-                console.error('❌ Error al cargar imagen en SwipeCard:', {
-                  profileId: profile.id,
-                  imageUri,
-                  error: error.nativeEvent?.error || error,
-                });
-              }}
-              onLoad={() => {
-                console.log('✅ Imagen cargada exitosamente en SwipeCard:', {
-                  profileId: profile.id,
-                  imageUri,
-                });
-              }}
-            />
-          );
-        })()}
+        <Image
+          source={{ uri: getAvatarUrl(profile.avatarUrl) }}
+          style={styles.image}
+          resizeMode="cover"
+        />
 
         {/* Información del perfil */}
         <View style={styles.infoContainer}>

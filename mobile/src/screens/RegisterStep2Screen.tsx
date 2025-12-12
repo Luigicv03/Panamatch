@@ -25,17 +25,6 @@ export default function RegisterStep2Screen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(route.params?.avatarUri || null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const pickImage = async () => {
-    try {
-      const uri = await imageService.pickImageFromLibrary();
-      if (uri) {
-        setAvatarUri(uri);
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al seleccionar imagen');
-    }
-  };
-
   const takePhoto = async () => {
     try {
       const uri = await imageService.takePhoto();
@@ -43,7 +32,9 @@ export default function RegisterStep2Screen() {
         setAvatarUri(uri);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al tomar foto');
+      if (error.message !== 'User canceled image picker') {
+        Alert.alert('Error', error.message || 'Error al tomar foto');
+      }
     }
   };
 
@@ -77,10 +68,6 @@ export default function RegisterStep2Screen() {
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={pickImage}>
-          <Text style={styles.actionButtonText}>Elegir de Galería</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
           <Text style={styles.actionButtonText}>Tomar Foto</Text>
         </TouchableOpacity>

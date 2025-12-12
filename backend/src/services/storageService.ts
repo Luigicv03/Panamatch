@@ -8,14 +8,26 @@ class StorageService {
   private useGCS: boolean;
 
   constructor() {
- 
-    this.useGCS = !!(
-      process.env.GOOGLE_CLOUD_PROJECT_ID &&
-      process.env.GOOGLE_CLOUD_BUCKET_NAME &&
-      (process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-       process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ||
-       process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64)
+    const hasProjectId = !!process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const hasBucketName = !!process.env.GOOGLE_CLOUD_BUCKET_NAME;
+    const hasCredentials = !!(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64
     );
+
+    console.log('🔍 Verificando configuración de GCS:', {
+      hasProjectId,
+      hasBucketName,
+      hasCredentials,
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
+      hasCredentialsJSON: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+      hasCredentialsBase64: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64,
+      hasCredentialsFile: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    });
+
+    this.useGCS = !!(hasProjectId && hasBucketName && hasCredentials);
 
     if (this.useGCS) {
       try {
@@ -23,9 +35,34 @@ class StorageService {
 
         if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
           try {
-            credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-          } catch (parseError) {
-            console.error('Error al parsear GOOGLE_APPLICATION_CREDENTIALS_JSON:', parseError);
+            let jsonString = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+            
+            // Si el JSON está envuelto en comillas simples, removerlas
+            if (jsonString.startsWith("'") && jsonString.endsWith("'")) {
+              jsonString = jsonString.slice(1, -1);
+            }
+            if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
+              jsonString = jsonString.slice(1, -1);
+            }
+            
+            // Reemplazar \n literales por saltos de línea reales
+            jsonString = jsonString.replace(/\\n/g, '\n');
+            
+            console.log('📝 Intentando parsear GOOGLE_APPLICATION_CREDENTIALS_JSON, longitud:', jsonString.length);
+            console.log('📝 Primeros 200 caracteres:', jsonString.substring(0, 200));
+            
+            credentials = JSON.parse(jsonString);
+            
+            console.log('✅ Credenciales parseadas correctamente desde GOOGLE_APPLICATION_CREDENTIALS_JSON');
+            console.log('✅ Tipo de credenciales:', credentials.type);
+            console.log('✅ Project ID en credenciales:', credentials.project_id);
+          } catch (parseError: any) {
+            console.error('❌ Error al parsear GOOGLE_APPLICATION_CREDENTIALS_JSON:', {
+              message: parseError.message,
+              errorPosition: parseError.message.match(/position (\d+)/)?.[1],
+              stack: parseError.stack,
+              jsonPreview: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.substring(0, 200),
+            });
           }
         }
 
@@ -60,15 +97,30 @@ class StorageService {
           throw new Error('No se pudieron cargar las credenciales de Google Cloud');
         }
 
+        console.log('🔧 Inicializando Google Cloud Storage con:', {
+          projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+          bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
+          hasCredentials: !!credentials,
+          credentialsType: credentials.type,
+          credentialsProjectId: credentials.project_id,
+        });
+
         this.gcs = new Storage({
           projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
           credentials: credentials,
         });
         this.bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME!;
-      } catch (error) {
-        console.error('Error al inicializar Google Cloud Storage:', error);
+        
+        console.log('✅ Google Cloud Storage inicializado correctamente');
+      } catch (error: any) {
+        console.error('❌ Error al inicializar Google Cloud Storage:', {
+          message: error.message,
+          stack: error.stack,
+        });
         this.useGCS = false;
       }
+    } else {
+      console.log('⚠️  Google Cloud Storage no está configurado, usando almacenamiento local');
     }
   }
 

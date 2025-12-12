@@ -64,6 +64,21 @@ app.get('/health', (req, res) => {
 
 import { storageService } from './services/storageService';
 
+app.get('/test-gcs', (req, res) => {
+  res.json({
+    isUsingGCS: storageService.isUsingGCS(),
+    hasProjectId: !!process.env.GOOGLE_CLOUD_PROJECT_ID,
+    hasBucketName: !!process.env.GOOGLE_CLOUD_BUCKET_NAME,
+    hasCredentialsJSON: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
+    hasCredentialsBase64: !!process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64,
+    hasCredentialsFile: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+    bucketName: process.env.GOOGLE_CLOUD_BUCKET_NAME,
+    credentialsJSONLength: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.length || 0,
+    credentialsJSONPreview: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.substring(0, 100) || null,
+  });
+});
+
 let uploadsPath: string | undefined;
 
 if (!storageService.isUsingGCS()) {

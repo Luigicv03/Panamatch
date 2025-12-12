@@ -82,21 +82,19 @@ export default function HomeScreen() {
     }
   }, [candidates, currentIndex]);
 
-  // Mutación para dar like
   const likeMutation = useMutation({
     mutationFn: (profileId: string) => swipeService.likeCandidate(profileId),
     onSuccess: (response) => {
       if (response.match) {
         setCurrentMatch(response.match);
         setShowMatchModal(true);
-      }
-      // Remover candidato actual
-      const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
-      setCandidates(newCandidates);
-      setCurrentIndex(0); // Resetear índice
-      if (newCandidates.length === 0) {
-        // Cargar más candidatos si no hay más
-        refetch();
+      } else {
+        const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
+        setCandidates(newCandidates);
+        setCurrentIndex(0);
+        if (newCandidates.length === 0) {
+          refetch();
+        }
       }
     },
     onError: (error: any) => {
@@ -155,7 +153,13 @@ export default function HomeScreen() {
 
   const handleMatchClose = () => {
     setShowMatchModal(false);
+    const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
+    setCandidates(newCandidates);
+    setCurrentIndex(0);
     setCurrentMatch(null);
+    if (newCandidates.length === 0) {
+      refetch();
+    }
   };
 
   const handleGoToChat = () => {

@@ -210,85 +210,35 @@ export default function ProfileScreen() {
   };
 
   const handleChangePhoto = async () => {
-    Alert.alert(
-      'Cambiar Foto',
-      '¿Cómo quieres cambiar tu foto?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Galería',
-          onPress: async () => {
-            try {
-              setIsUploading(true);
-              const uri = await imageService.pickImageFromLibrary();
-              if (uri) {
-                try {
-                  const result = await imageService.uploadImage(uri, 'profile');
-                  // Actualizar optimísticamente el estado
-                  setProfile({ ...profile!, avatarUrl: result.url });
-                  // Recargar perfil para sincronizar
-                  await fetchProfile();
-                } catch (error: any) {
-                  // Si es un error de red, el archivo puede haberse subido
-                  if (error.isNetworkError || error.code === 'ECONNABORTED' || !error.response) {
-                    // Esperar un momento y recargar el perfil
-                    setTimeout(async () => {
-                      try {
-                        await fetchProfile();
-                      } catch (fetchError) {
-                        console.error('Error al recargar perfil:', fetchError);
-                      }
-                    }, 1500);
-                  } else {
-                    throw error;
-                  }
-                }
+    try {
+      setIsUploading(true);
+      const uri = await imageService.takePhoto();
+      if (uri) {
+        try {
+          const result = await imageService.uploadImage(uri, 'profile');
+          setProfile({ ...profile!, avatarUrl: result.url });
+          await fetchProfile();
+        } catch (error: any) {
+          if (error.isNetworkError || error.code === 'ECONNABORTED' || !error.response) {
+            setTimeout(async () => {
+              try {
+                await fetchProfile();
+              } catch (fetchError) {
+                console.error('Error al recargar perfil:', fetchError);
               }
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || error.message || 'Error al cambiar foto');
-            } finally {
-              setIsUploading(false);
-            }
-          },
-        },
-        {
-          text: 'Cámara',
-          onPress: async () => {
-            try {
-              setIsUploading(true);
-              const uri = await imageService.takePhoto();
-              if (uri) {
-                try {
-                  const result = await imageService.uploadImage(uri, 'profile');
-                  // Actualizar optimísticamente el estado
-                  setProfile({ ...profile!, avatarUrl: result.url });
-                  // Recargar perfil para sincronizar
-                  await fetchProfile();
-                } catch (error: any) {
-                  // Si es un error de red, el archivo puede haberse subido
-                  if (error.isNetworkError || error.code === 'ECONNABORTED' || !error.response) {
-                    // Esperar un momento y recargar el perfil
-                    setTimeout(async () => {
-                      try {
-                        await fetchProfile();
-                      } catch (fetchError) {
-                        console.error('Error al recargar perfil:', fetchError);
-                      }
-                    }, 1500);
-                  } else {
-                    throw error;
-                  }
-                }
-              }
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || error.message || 'Error al tomar foto');
-            } finally {
-              setIsUploading(false);
-            }
-          },
-        },
-      ]
-    );
+            }, 1500);
+          } else {
+            throw error;
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.message !== 'User canceled image picker') {
+        Alert.alert('Error', error.response?.data?.error || error.message || 'Error al tomar foto');
+      }
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (isLoading) {

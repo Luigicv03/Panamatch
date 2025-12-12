@@ -207,52 +207,17 @@ export default function ChatDetailScreen() {
     },
   });
 
-  // Función para enviar imagen
   const handleSendImage = async () => {
     try {
       setIsUploadingImage(true);
-      
-      // Permitir elegir entre galería o cámara
-      Alert.alert(
-        'Enviar Imagen',
-        '¿Cómo quieres enviar la imagen?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Galería',
-            onPress: async () => {
-              try {
-                const uri = await imageService.pickImageFromLibrary();
-                if (uri) {
-                  await sendImageToChat(uri);
-                }
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'Error al seleccionar imagen');
-              } finally {
-                setIsUploadingImage(false);
-              }
-            },
-          },
-          {
-            text: 'Cámara',
-            onPress: async () => {
-              try {
-                const uri = await imageService.takePhoto();
-                if (uri) {
-                  await sendImageToChat(uri);
-                }
-              } catch (error: any) {
-                Alert.alert('Error', error.message || 'Error al tomar foto');
-              } finally {
-                setIsUploadingImage(false);
-              }
-            },
-          },
-        ],
-        { cancelable: true }
-      );
+      const uri = await imageService.takePhoto();
+      if (uri) {
+        await sendImageToChat(uri);
+      }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Error al enviar imagen');
+      if (error.message !== 'User canceled image picker') {
+        Alert.alert('Error', error.message || 'Error al tomar foto');
+      }
       setIsUploadingImage(false);
     }
   };
@@ -405,13 +370,6 @@ export default function ChatDetailScreen() {
       imageUrl = `${config.apiUrl}/uploads/messages/${item.mediaId}`;
     }
 
-    console.log('📸 URL de imagen determinada:', {
-      messageId: item.id,
-      imageUrl,
-      hasMediaObject: !!item.media,
-      mediaUrl: item.media?.url,
-      mediaId: item.mediaId,
-    });
 
     return (
       <View
@@ -445,22 +403,8 @@ export default function ChatDetailScreen() {
               source={{ uri: imageUrl }}
               style={styles.messageImage}
               resizeMode="cover"
-              onError={(error) => {
-                console.error('❌ Error al cargar imagen del mensaje:', {
-                  messageId: item.id,
-                  mediaId: item.mediaId,
-                  imageUrl,
-                  error: error.nativeEvent?.error || error.nativeEvent,
-                  errorType: typeof error.nativeEvent,
-                  mediaObject: item.media,
-                  apiUrl: config.apiUrl,
-                });
-              }}
-              onLoad={() => {
-                console.log('✅ Imagen del mensaje cargada correctamente:', {
-                  messageId: item.id,
-                  imageUrl,
-                });
+              onError={() => {
+                // Error silencioso - la imagen no se puede cargar (probablemente no está disponible en Render)
               }}
             />
           )}
