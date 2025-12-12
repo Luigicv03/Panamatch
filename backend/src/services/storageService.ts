@@ -74,15 +74,11 @@ class StorageService {
                 credsString = credsString.slice(1, -1);
               }
               
-              credsString = credsString.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ');
+              credentials = JSON.parse(credsString);
               
-              let normalized = credsString;
-              while (normalized.includes('\\\\n')) {
-                normalized = normalized.replace(/\\\\n/g, '\\n');
+              if (credentials.private_key && typeof credentials.private_key === 'string') {
+                credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
               }
-              normalized = normalized.replace(/\\n/g, '\n');
-              
-              credentials = JSON.parse(normalized);
             } catch (jsonError: any) {
               console.error('Error al parsear GOOGLE_APPLICATION_CREDENTIALS como JSON:', jsonError.message);
             }
