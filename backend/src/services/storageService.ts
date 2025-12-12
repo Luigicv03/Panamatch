@@ -37,7 +37,12 @@ class StorageService {
               jsonString = jsonString.slice(1, -1);
             }
             
+            jsonString = jsonString.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ');
+            while (jsonString.includes('\\\\n')) {
+              jsonString = jsonString.replace(/\\\\n/g, '\\n');
+            }
             jsonString = jsonString.replace(/\\n/g, '\n');
+            
             credentials = JSON.parse(jsonString);
           } catch (parseError: any) {
             console.error('Error al parsear GOOGLE_APPLICATION_CREDENTIALS_JSON:', parseError.message);
@@ -69,8 +74,15 @@ class StorageService {
                 credsString = credsString.slice(1, -1);
               }
               
-              credsString = credsString.replace(/\\n/g, '\n');
-              credentials = JSON.parse(credsString);
+              credsString = credsString.replace(/\r\n/g, ' ').replace(/\r/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ');
+              
+              let normalized = credsString;
+              while (normalized.includes('\\\\n')) {
+                normalized = normalized.replace(/\\\\n/g, '\\n');
+              }
+              normalized = normalized.replace(/\\n/g, '\n');
+              
+              credentials = JSON.parse(normalized);
             } catch (jsonError: any) {
               console.error('Error al parsear GOOGLE_APPLICATION_CREDENTIALS como JSON:', jsonError.message);
             }
