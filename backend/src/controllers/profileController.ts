@@ -31,17 +31,9 @@ export const getCurrentProfile = async (
       return;
     }
 
-    // Formatear respuesta - Asegurar que avatarUrl se incluya explícitamente
-    console.log('📸 Perfil actual:', {
-      id: profile.id,
-      firstName: profile.firstName,
-      avatarUrl: profile.avatarUrl,
-      hasAvatarUrl: !!profile.avatarUrl,
-    });
-    
     const formattedProfile = {
       ...profile,
-      avatarUrl: profile.avatarUrl, // Asegurar que se incluya explícitamente
+      avatarUrl: profile.avatarUrl,
       interests: profile.interests.map((ui) => ui.interest),
     };
 

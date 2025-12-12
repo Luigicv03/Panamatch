@@ -39,7 +39,6 @@ export const setupSocketIO = (io: Server) => {
   });
 
   io.on('connection', (socket: SocketWithUser) => {
-    console.log('Usuario conectado:', socket.userId);
 
     // Unirse a salas de chats del usuario
     socket.on('join:chats', async () => {
@@ -171,18 +170,6 @@ export const setupSocketIO = (io: Server) => {
           } : null,
         };
 
-        console.log('📤 Mensaje creado para emitir:', {
-          messageId: message.id,
-          chatId: data.chatId,
-          senderId: message.senderId,
-          senderName: `${message.sender.firstName} ${message.sender.lastName}`,
-          hasMedia: !!media,
-          mediaId: media?.id,
-          mediaUrl: media?.url,
-          mediaObject: media,
-          fullMessage: JSON.stringify(messageWithMedia, null, 2),
-        });
-
         // Actualizar último mensaje del chat
         await prisma.chat.update({
           where: { id: data.chatId },
@@ -246,7 +233,7 @@ export const setupSocketIO = (io: Server) => {
 
     // Desconexión
     socket.on('disconnect', () => {
-      console.log('Usuario desconectado:', socket.userId);
+      // Usuario desconectado
     });
   });
 };

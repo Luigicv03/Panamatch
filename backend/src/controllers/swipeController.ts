@@ -100,23 +100,11 @@ export const getCandidates = async (
       candidates = [...candidates, ...additionalCandidates];
     }
 
-    // Formatear respuesta - Asegurar que avatarUrl se incluya explícitamente
-    const formattedCandidates = candidates.map((profile) => {
-      console.log('📸 Perfil candidato:', {
-        id: profile.id,
-        firstName: profile.firstName,
-        avatarUrl: profile.avatarUrl,
-        hasAvatarUrl: !!profile.avatarUrl,
-      });
-      
-      return {
-        ...profile,
-        avatarUrl: profile.avatarUrl, // Asegurar que se incluya explícitamente
-        interests: profile.interests.map((ui) => ui.interest),
-      };
-    });
-
-    console.log('📤 Enviando candidatos:', formattedCandidates.length, 'perfiles');
+    const formattedCandidates = candidates.map((profile) => ({
+      ...profile,
+      avatarUrl: profile.avatarUrl,
+      interests: profile.interests.map((ui) => ui.interest),
+    }));
     res.json(formattedCandidates);
   } catch (error) {
     console.error('Error al obtener candidatos:', error);

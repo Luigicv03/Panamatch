@@ -2,11 +2,6 @@ import { Storage } from '@google-cloud/storage';
 import * as path from 'path';
 import * as fs from 'fs';
 
-/**
- * Servicio de almacenamiento que soporta:
- * - Google Cloud Storage (producción)
- * - Almacenamiento local (desarrollo)
- */
 class StorageService {
   private gcs: Storage | null = null;
   private bucketName: string | null = null;
@@ -26,17 +21,7 @@ class StorageService {
       try {
         let credentials: any = undefined;
 
-        if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-          if (fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
-            credentials = JSON.parse(
-              fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8')
-            );
-          } else {
-            console.warn('Archivo de credenciales no encontrado:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
-          }
-        }
-
-        if (!credentials && process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+        if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
           try {
             credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
           } catch (parseError) {
@@ -53,6 +38,24 @@ class StorageService {
           }
         }
 
+        if (!credentials && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+          if (fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+            try {
+              credentials = JSON.parse(
+                fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8')
+              );
+            } catch (fileError) {
+              console.error('Error al leer archivo de credenciales:', fileError);
+            }
+          } else {
+            try {
+              credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+            } catch (jsonError) {
+              console.warn('GOOGLE_APPLICATION_CREDENTIALS no es válido');
+            }
+          }
+        }
+
         if (!credentials) {
           throw new Error('No se pudieron cargar las credenciales de Google Cloud');
         }
@@ -62,7 +65,6 @@ class StorageService {
           credentials: credentials,
         });
         this.bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME!;
-        console.log('Google Cloud Storage configurado');
       } catch (error) {
         console.error('Error al inicializar Google Cloud Storage:', error);
         this.useGCS = false;
@@ -70,12 +72,6 @@ class StorageService {
     }
   }
 
-  /**
-   * @param fileBuffer Buffer del archivo
-   * @param filename Nombre del archivo
-   * @param type Tipo: 'avatar' o 'message'
-   * @returns URL pública del archivo
-   */
   async uploadFile(
     fileBuffer: Buffer,
     filename: string,
@@ -88,8 +84,6 @@ class StorageService {
     }
   }
 
-  /**
-   */
   private async uploadToGCS(
     fileBuffer: Buffer,
     filename: string,
@@ -104,13 +98,12 @@ class StorageService {
     const filePath = `${subDir}/${filename}`;
     const file = bucket.file(filePath);
 
-    // Subir el archivo
     const stream = file.createWriteStream({
       metadata: {
         contentType: this.getContentType(filename),
-        cacheControl: 'public, max-age=31536000', // Cache de 1 año
+        cacheControl: 'public, max-age=31536000',
       },
-      public: true, // Hacer el archivo público
+      public: true,
     });
 
     return new Promise((resolve, reject) => {
@@ -128,8 +121,6 @@ class StorageService {
     });
   }
 
-  /**
-   */
   private async uploadToLocal(
     fileBuffer: Buffer,
     filename: string,
@@ -149,13 +140,11 @@ class StorageService {
     // Escribir archivo
     fs.writeFileSync(fullPath, fileBuffer);
 
-    // Retornar ruta relativa (el frontend construirá la URL completa)
     return `/uploads/${subDir}/${filename}`;
   }
 
   async deleteFile(fileUrl: string): Promise<void> {
     if (this.useGCS && this.gcs && this.bucketName) {
-      // Extraer path del archivo de la URL de GCS
       const urlPattern = new RegExp(`https://storage\\.googleapis\\.com/${this.bucketName}/(.+)`);
       const match = fileUrl.match(urlPattern);
       
@@ -185,9 +174,6 @@ class StorageService {
     }
   }
 
-  /**
-   * Obtiene el content type basado en la extensión del archivo
-   */
   private getContentType(filename: string): string {
     const ext = path.extname(filename).toLowerCase();
     const contentTypes: { [key: string]: string } = {
@@ -200,14 +186,10 @@ class StorageService {
     return contentTypes[ext] || 'image/jpeg';
   }
 
-  /**
-   * Verifica si el servicio está usando GCS
-   */
   isUsingGCS(): boolean {
     return this.useGCS;
   }
 }
 
-// Exportar instancia singleton
 export const storageService = new StorageService();
 
