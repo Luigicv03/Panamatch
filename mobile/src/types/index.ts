@@ -1,5 +1,3 @@
-// Tipos principales de la aplicación
-
 export interface User {
   id: string;
   email: string;
@@ -90,7 +88,6 @@ export interface Media {
   createdAt: string;
 }
 
-// Tipos de navegación
 export type RootStackParamList = {
   Splash: undefined;
   Auth: undefined;

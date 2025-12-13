@@ -40,18 +40,14 @@ export default function LoginScreen() {
       const response = await authService.login({ email, password });
       await login(response.accessToken, response.refreshToken, response.user);
       
-      // Verificar si tiene perfil
       try {
         await fetchProfile();
-        // Si tiene perfil, ir a Main
-        navigation.replace('Main');
+        (navigation as any).getParent()?.navigate('Main');
       } catch (error: any) {
-        // Si no tiene perfil (404), redirigir a completar registro
         if (error?.response?.status === 404 || profileNotFound) {
           navigation.replace('RegisterStep1');
         } else {
-          // Otro error, aún así intentar ir a Main
-          navigation.replace('Main');
+          (navigation as any).getParent()?.navigate('Main');
         }
       }
     } catch (error: any) {
@@ -69,7 +65,7 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Iniciar Sesión</Text>
           <Text style={styles.subtitle}>
@@ -122,7 +118,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -132,13 +128,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
+  content: {
+    flex: 1,
     justifyContent: 'center',
+    padding: 24,
   },
   header: {
-    marginBottom: 40,
+    marginBottom: 32,
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
@@ -152,9 +149,11 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+    alignItems: 'center',
   },
   inputContainer: {
     marginBottom: 20,
+    width: '100%',
   },
   label: {
     fontSize: 14,
@@ -188,6 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    width: '100%',
   },
   buttonDisabled: {
     opacity: 0.6,

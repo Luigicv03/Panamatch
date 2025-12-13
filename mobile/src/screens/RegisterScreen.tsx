@@ -52,7 +52,6 @@ export default function RegisterScreen() {
         confirmPassword,
       });
 
-      // Validar respuesta antes de guardar
       if (!response || !response.accessToken || !response.refreshToken || !response.user) {
         Alert.alert('Error', 'La respuesta del servidor es inválida');
         setIsLoading(false);
@@ -61,10 +60,8 @@ export default function RegisterScreen() {
 
       await login(response.accessToken, response.refreshToken, response.user);
       
-      // Redirigir inmediatamente al flujo de registro de perfil
       navigation.replace('RegisterStep1');
     } catch (error: any) {
-      console.error('Error en registro:', error);
       Alert.alert(
         'Error',
         error.message || error.response?.data?.error || 'Error al crear la cuenta'

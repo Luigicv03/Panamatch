@@ -208,13 +208,16 @@ export const likeCandidate = async (
       });
 
       // Crear chat para el match
-      await prisma.chat.create({
+      const chat = await prisma.chat.create({
         data: {
           matchId: match.id,
           user1Id: currentProfile.id,
           user2Id: id,
         },
       });
+
+      // Incluir el chat en el match
+      match.chat = chat;
     }
 
     res.json({
@@ -229,6 +232,7 @@ export const likeCandidate = async (
               ...match.user2,
               interests: match.user2.interests.map((ui) => ui.interest),
             },
+            chat: match.chat || null,
           }
         : null,
       message: match ? '¡Hiciste un match!' : 'Like registrado',

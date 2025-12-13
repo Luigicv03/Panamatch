@@ -14,10 +14,8 @@ export default function SplashScreen({ onFinish }: SplashScreenProps = {}) {
   const { checkAuth, isAuthenticated, isLoading } = useAuthStore();
 
   useEffect(() => {
-    // Verificar autenticación al cargar
     checkAuth();
 
-    // Animaciones
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -32,7 +30,6 @@ export default function SplashScreen({ onFinish }: SplashScreenProps = {}) {
       }),
     ]).start();
 
-    // Llamar callback después de 2 segundos si está disponible
     const timer = setTimeout(() => {
       if (!isLoading && onFinish) {
         onFinish();

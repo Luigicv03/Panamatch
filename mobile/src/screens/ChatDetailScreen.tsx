@@ -35,13 +35,9 @@ export default function ChatDetailScreen() {
   const { chatId, userId } = route.params as { chatId: string; userId: string };
   const { profile, fetchProfile } = useProfileStore();
 
-  // Asegurar que el perfil esté cargado
   useEffect(() => {
     if (!profile) {
-      console.log('Profile no disponible, intentando cargar...');
-      fetchProfile().catch((error) => {
-        console.error('Error al cargar perfil en ChatDetailScreen:', error);
-      });
+      fetchProfile().catch(() => {});
     }
   }, [profile, fetchProfile]);
 
@@ -50,51 +46,88 @@ export default function ChatDetailScreen() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const messageHandlerRef = useRef<((newMessage: Message) => void) | null>(null);
 
-  // Conectar socket y unirse al chat
   useEffect(() => {
-    // Asegurar que el socket está conectado con el token actual
-    socketService.connect().then(() => {
-      socketService.joinChat(chatId);
-    }).catch((error) => {
-      console.error('Error al conectar socket:', error);
-    });
+    let isMounted = true;
+    
+    const setupSocket = async () => {
+      try {
+        const socket = await socketService.connect();
+        if (isMounted && socket.connected) {
+          socketService.joinChat(chatId);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+      }
+    };
+    
+    setupSocket();
 
-    // Escuchar mensajes nuevos
     const handleMessage = (newMessage: Message) => {
-      console.log('📩 Nuevo mensaje recibido por Socket:', {
-        messageId: newMessage.id,
-        senderId: newMessage.senderId,
-        hasMedia: !!newMessage.media,
-        mediaId: newMessage.mediaId,
-        mediaUrl: newMessage.media?.url,
-        content: newMessage.content,
-        fullMessage: newMessage,
-      });
+      if (newMessage.chatId !== chatId) {
+        return;
+      }
       
       queryClient.setQueryData(['chatMessages', chatId], (oldData: any) => {
-        if (!oldData) return oldData;
-        
-        // Verificar si el mensaje ya existe para evitar duplicados
-        const allExistingMessages = oldData.pages.flatMap((page: any) => page.messages);
-        const messageExists = allExistingMessages.some((msg: Message) => msg.id === newMessage.id);
-        if (messageExists) {
-          console.log('⚠️ Mensaje ya existe, ignorando duplicado:', newMessage.id);
-          return oldData; // No agregar si ya existe
+        if (!oldData) {
+          return {
+            pages: [{
+              messages: [newMessage],
+              hasMore: false,
+              page: 1,
+            }],
+            pageParams: [1],
+          };
         }
         
-        // Agregar el nuevo mensaje al inicio de la primera página (mensajes más recientes)
-        // Los mensajes deben estar ordenados cronológicamente (más antiguos primero)
-        const updatedMessages = [...oldData.pages[0].messages, newMessage];
+        const allExistingMessages = oldData.pages.flatMap((page: any) => page.messages);
         
-        // Ordenar por fecha (más antiguos primero)
+        const messageExistsById = allExistingMessages.some((msg: Message) => msg.id === newMessage.id);
+        if (messageExistsById) {
+          return oldData;
+        }
+        
+        const isOwnMessage = profile && newMessage.senderId === profile.id;
+        
+        let messagesWithoutTemp = oldData.pages[0].messages;
+        
+        if (isOwnMessage) {
+          messagesWithoutTemp = oldData.pages[0].messages.filter((msg: Message) => {
+            if (msg.id.startsWith('temp-') && msg.senderId === newMessage.senderId) {
+              const contentMatch = (msg.content || '') === (newMessage.content || '');
+              const mediaMatch = (msg.mediaId || '') === (newMessage.mediaId || '');
+              if (contentMatch && mediaMatch) {
+                return false;
+              }
+            }
+            return true;
+          });
+          
+          const messageExistsByContent = messagesWithoutTemp.some((msg: Message) => {
+            if (msg.senderId === newMessage.senderId && !msg.id.startsWith('temp-') && msg.id !== newMessage.id) {
+              const contentMatch = (msg.content || '') === (newMessage.content || '');
+              const mediaMatch = (msg.mediaId || '') === (newMessage.mediaId || '');
+              const timeDiff = Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessage.createdAt).getTime());
+              if (contentMatch && mediaMatch && timeDiff < 15000) {
+                return true;
+              }
+            }
+            return false;
+          });
+          
+          if (messageExistsByContent) {
+            return oldData;
+          }
+        }
+        
+        const updatedMessages = [...messagesWithoutTemp, newMessage];
+        
         updatedMessages.sort((a: Message, b: Message) => {
           const dateA = new Date(a.createdAt).getTime();
           const dateB = new Date(b.createdAt).getTime();
           return dateA - dateB;
         });
-        
-        console.log('✅ Mensaje agregado a la lista. Total mensajes:', updatedMessages.length);
         
         return {
           ...oldData,
@@ -109,27 +142,34 @@ export default function ChatDetailScreen() {
         };
       });
       
-      // Scroll al final
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     };
+    
+    if (messageHandlerRef.current) {
+      socketService.offMessage(messageHandlerRef.current);
+    }
+    messageHandlerRef.current = handleMessage;
 
-    // Escuchar indicador de escritura
-    const handleTypingStart = () => {
-      setIsTyping(true);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+    const handleTypingStart = (data: any) => {
+      if (data.chatId === chatId) {
+        setIsTyping(true);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsTyping(false);
+        }, 3000);
       }
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-      }, 3000);
     };
 
-    const handleTypingStop = () => {
-      setIsTyping(false);
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+    const handleTypingStop = (data: any) => {
+      if (data.chatId === chatId) {
+        setIsTyping(false);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
       }
     };
 
@@ -138,12 +178,16 @@ export default function ChatDetailScreen() {
     socketService.onTypingStop(handleTypingStop);
 
     return () => {
-      socketService.offMessage(handleMessage);
-      socketService.leaveChat(chatId);
+      isMounted = false;
+      if (messageHandlerRef.current) {
+        socketService.offMessage(messageHandlerRef.current);
+        messageHandlerRef.current = null;
+      }
+      socketService.offTypingStart(handleTypingStart);
+      socketService.offTypingStop(handleTypingStop);
     };
   }, [chatId]);
 
-  // Obtener mensajes
   const {
     data: messagesData,
     isLoading,
@@ -166,43 +210,83 @@ export default function ChatDetailScreen() {
     initialPageParam: 1,
   });
 
-  // Mutación para enviar mensaje
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, mediaId }: { content?: string; mediaId?: string }) => {
-      // Verificar que el socket esté conectado
-      const socket = socketService.getSocket();
+      let socket = socketService.getSocket();
       if (!socket || !socket.connected) {
-        console.warn('Socket no conectado, intentando reconectar...');
-        await socketService.connect();
+        socket = await socketService.connect();
       }
       
-      // Verificar que tenemos el perfil del usuario actual
+      if (socket.connected) {
+        socketService.joinChat(chatId);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       if (!profile) {
         throw new Error('No se pudo identificar tu perfil. Por favor, intenta de nuevo.');
       }
       
-      // Log para debugging
-      console.log('Enviando mensaje:', {
+      socketService.sendMessage(chatId, content || '', mediaId);
+      return { success: true };
+    },
+    onMutate: async ({ content, mediaId }) => {
+      if (!profile) return;
+      
+      const tempMessage: Message = {
+        id: `temp-${Date.now()}`,
         chatId,
         senderId: profile.id,
-        senderName: `${profile.firstName} ${profile.lastName}`,
-        hasContent: !!content,
-        hasMedia: !!mediaId,
+        content: content || undefined,
+        mediaId: mediaId || undefined,
+        read: false,
+        createdAt: new Date().toISOString(),
+        sender: profile,
+        media: mediaId ? { id: mediaId, url: '', type: 'message' as const, mimeType: '', createdAt: new Date().toISOString() } : undefined,
+      };
+      
+      queryClient.setQueryData(['chatMessages', chatId], (oldData: any) => {
+        if (!oldData) {
+          return {
+            pages: [{
+              messages: [tempMessage],
+              hasMore: false,
+              page: 1,
+            }],
+            pageParams: [1],
+          };
+        }
+        
+        const updatedMessages = [...oldData.pages[0].messages, tempMessage];
+        updatedMessages.sort((a: Message, b: Message) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateA - dateB;
+        });
+        
+        return {
+          ...oldData,
+          pages: [
+            {
+              messages: updatedMessages,
+              hasMore: oldData.pages[0].hasMore,
+              page: oldData.pages[0].page,
+            },
+            ...oldData.pages.slice(1),
+          ],
+        };
       });
       
-      // Enviar SOLO por WebSocket (el backend manejará la persistencia)
-      socketService.sendMessage(chatId, content || '', mediaId);
-      // No usar REST para evitar duplicados
-      // El mensaje será recibido por Socket.IO cuando el backend lo procese
-      return { success: true };
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     },
     onSuccess: () => {
       setMessage('');
       socketService.stopTyping(chatId);
-      // Invalidar lista de chats
       queryClient.invalidateQueries({ queryKey: ['chats'] });
     },
     onError: (error: any) => {
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', chatId] });
       Alert.alert('Error', error.response?.data?.error || 'Error al enviar mensaje');
     },
   });
@@ -267,30 +351,15 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // Formatear todos los mensajes y ordenarlos por fecha (más antiguos primero)
   const allMessages = React.useMemo(() => {
     if (!messagesData?.pages) return [];
     
     const messages = messagesData.pages.flatMap((page) => page.messages);
     
-    // Eliminar duplicados por ID
     const uniqueMessages = Array.from(
       new Map(messages.map((msg: Message) => [msg.id, msg])).values()
     );
     
-    // Log para debugging - verificar mensajes con media
-    const messagesWithMedia = uniqueMessages.filter((msg: Message) => msg.media || msg.mediaId);
-    if (messagesWithMedia.length > 0) {
-      console.log('📋 Mensajes con media encontrados:', messagesWithMedia.map((msg: Message) => ({
-        id: msg.id,
-        hasMedia: !!msg.media,
-        mediaId: msg.mediaId,
-        mediaUrl: msg.media?.url,
-        mediaObject: msg.media,
-      })));
-    }
-    
-    // Ordenar por fecha de creación (más antiguos primero)
     return uniqueMessages.sort((a: Message, b: Message) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
@@ -299,41 +368,16 @@ export default function ChatDetailScreen() {
   }, [messagesData]);
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    // CRÍTICO: Verificar que el profile existe y comparar correctamente
-    if (!profile) {
-      console.warn('Profile no disponible para renderizar mensaje');
-    }
-    
-    // Comparar senderId con profile.id (el perfil del usuario actual)
     const isOwn = profile && item.senderId === profile.id;
-    
-    // Log detallado para debugging - especialmente para mensajes con media
-    if (item.media || item.mediaId) {
-      console.log('🖼️ Renderizando mensaje CON IMAGEN:', {
-        messageId: item.id,
-        senderId: item.senderId,
-        profileId: profile?.id,
-        isOwn,
-        hasMedia: !!item.media,
-        mediaId: item.mediaId,
-        mediaObject: item.media,
-        mediaUrl: item.media?.url,
-        content: item.content,
-        fullItem: JSON.stringify(item, null, 2),
-      });
-    }
     
     const prevMessage = index > 0 ? allMessages[index - 1] : null;
     const showAvatar = !prevMessage || prevMessage.senderId !== item.senderId;
-    const showTime = !prevMessage || 
-      new Date(item.createdAt).getTime() - new Date(prevMessage.createdAt).getTime() > 60000;
+    const showTime = true;
 
-    // Determinar la URL de la imagen
     let imageUrl: string | null = null;
     if (item.media?.url) {
       imageUrl = getImageUrl(item.media.url);
     } else if (item.mediaId) {
-      // Fallback: construir URL desde mediaId
       imageUrl = `${config.apiUrl}/uploads/messages/${item.mediaId}`;
     }
 
@@ -364,18 +408,14 @@ export default function ChatDetailScreen() {
               {item.sender?.firstName} {item.sender?.lastName}
             </Text>
           )}
-          {/* Renderizar imagen si existe */}
           {imageUrl && (
             <Image
               source={{ uri: imageUrl }}
               style={styles.messageImage}
               resizeMode="cover"
-              onError={() => {
-                // Error silencioso - la imagen no se puede cargar (probablemente no está disponible en Render)
-              }}
+              onError={() => {}}
             />
           )}
-          {/* Renderizar contenido de texto si existe */}
           {item.content && (
             <Text
               style={[
@@ -387,7 +427,6 @@ export default function ChatDetailScreen() {
               {item.content}
             </Text>
           )}
-          {/* Mostrar placeholder si hay mediaId pero no se pudo cargar la imagen */}
           {!imageUrl && (item.media || item.mediaId) && !item.content && (
             <Text
               style={[
@@ -431,7 +470,6 @@ export default function ChatDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -441,15 +479,11 @@ export default function ChatDetailScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chat</Text>
         </View>
-
-        {/* Indicador de escritura */}
         {isTyping && (
           <View style={styles.typingIndicator}>
             <Text style={styles.typingText}>Escribiendo...</Text>
           </View>
         )}
-
-        {/* Lista de mensajes */}
         <FlatList
           ref={flatListRef}
           data={allMessages}
@@ -475,7 +509,6 @@ export default function ChatDetailScreen() {
           }
         />
 
-        {/* Barra de entrada */}
         <View style={styles.inputContainer}>
           <TouchableOpacity
             style={styles.imageButton}

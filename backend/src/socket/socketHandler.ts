@@ -63,8 +63,40 @@ export const setupSocketIO = (io: Server) => {
     });
 
     // Unirse a un chat específico
-    socket.on('join:chat', (chatId: string) => {
-      socket.join(`chat:${chatId}`);
+    socket.on('join:chat', async (chatId: string) => {
+      if (!socket.profileId) {
+        console.error('Error: socket.profileId no está definido al unirse al chat');
+        return;
+      }
+      
+      // Verificar que el usuario tiene acceso al chat
+      try {
+        const chat = await prisma.chat.findUnique({
+          where: { id: chatId },
+          select: {
+            user1Id: true,
+            user2Id: true,
+          },
+        });
+        
+        if (!chat) {
+          console.error('Chat no encontrado:', chatId);
+          return;
+        }
+        
+        if (chat.user1Id !== socket.profileId && chat.user2Id !== socket.profileId) {
+          console.error('Usuario no autorizado para este chat:', {
+            chatId,
+            profileId: socket.profileId,
+          });
+          return;
+        }
+        
+        socket.join(`chat:${chatId}`);
+        console.log('Usuario unido al chat:', { chatId, profileId: socket.profileId });
+      } catch (error) {
+        console.error('Error al unirse al chat:', error);
+      }
     });
 
     // Enviar mensaje
@@ -73,6 +105,18 @@ export const setupSocketIO = (io: Server) => {
         console.error('Error: socket.profileId no está definido');
         socket.emit('message:error', { error: 'No autorizado' });
         return;
+      }
+      
+      // Verificar que el socket está en la sala del chat
+      const rooms = Array.from(socket.rooms);
+      const chatRoom = `chat:${data.chatId}`;
+      if (!rooms.includes(chatRoom)) {
+        console.warn('Socket no está en la sala del chat, uniéndolo...', {
+          chatId: data.chatId,
+          profileId: socket.profileId,
+          rooms,
+        });
+        socket.join(chatRoom);
       }
 
       try {

@@ -45,18 +45,13 @@ export default function ProfileScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [loadAttempted, setLoadAttempted] = useState(false);
 
-  // Cargar perfil solo una vez al montar
   useEffect(() => {
     if (!loadAttempted && !profile && !isLoading) {
       setLoadAttempted(true);
-      fetchProfile().catch((err: any) => {
-        console.error('Error al cargar perfil:', err);
-        // El error ya fue manejado en el store
-      });
+      fetchProfile().catch(() => {});
     }
   }, [loadAttempted, profile, isLoading, fetchProfile]);
 
-  // Sincronizar form con perfil cuando cambia
   useEffect(() => {
     if (profile) {
       setForm({
@@ -78,14 +73,12 @@ export default function ProfileScreen() {
 
     setIsSaving(true);
     try {
-      // Convertir dateOfBirth al formato YYYY-MM-DD
       let dateOfBirthFormatted: string;
       if (profile.dateOfBirth) {
         const date = new Date(profile.dateOfBirth);
         if (isNaN(date.getTime())) {
           throw new Error('Fecha de nacimiento inválida');
         }
-        // Formatear como YYYY-MM-DD
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
@@ -94,22 +87,10 @@ export default function ProfileScreen() {
         throw new Error('Fecha de nacimiento no disponible');
       }
 
-      // Preparar intereses - solo enviar si existen y tienen IDs válidos
       const interestsIds = profile.interests
         ?.filter((i) => i && i.id)
         .map((i) => i.id) || [];
 
-      console.log('📝 Enviando datos de actualización:', {
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        dateOfBirth: dateOfBirthFormatted,
-        gender: profile.gender,
-        city: form.city.trim(),
-        bio: form.bio || undefined,
-        interests: interestsIds,
-      });
-
-      // Mantener los campos obligatorios completos
       await profileService.updateProfile({
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -123,7 +104,6 @@ export default function ProfileScreen() {
       setIsEditing(false);
       Alert.alert('Éxito', 'Perfil actualizado correctamente');
     } catch (error: any) {
-      console.error('Error al guardar perfil:', error);
       const errorMessage = error.response?.data?.error || 
                           error.response?.data?.details?.[0]?.message ||
                           error.message || 
@@ -140,14 +120,12 @@ export default function ProfileScreen() {
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email.trim())) {
       Alert.alert('Error', 'Por favor ingresa un email válido');
       return;
     }
 
-    // Si el email no cambió, no hacer nada
     if (form.email.trim() === user.email) {
       Alert.alert('Info', 'El email no ha cambiado');
       return;
@@ -157,7 +135,6 @@ export default function ProfileScreen() {
     try {
       const result = await authService.updateEmail(form.email.trim());
       
-      // Actualizar tokens y usuario en el store
       await updateAuth(
         result.accessToken,
         result.refreshToken,
@@ -166,7 +143,6 @@ export default function ProfileScreen() {
 
       Alert.alert('Éxito', 'Email actualizado correctamente');
     } catch (error: any) {
-      console.error('Error al actualizar email:', error);
       const errorMessage = error.response?.data?.error || 
                           error.response?.data?.details?.[0]?.message ||
                           error.message || 
@@ -189,18 +165,16 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await logout();
-              // Navegar al root navigator para cambiar a Auth stack
               const rootNavigation = navigation.getParent()?.getParent();
               if (rootNavigation) {
-                // @ts-ignore
-                rootNavigation.replace('Auth');
+                (rootNavigation as any).replace('Auth');
               } else {
-                // Fallback
-                // @ts-ignore
-                navigation.getParent()?.replace('Auth');
+                const parentNav = navigation.getParent();
+                if (parentNav) {
+                  (parentNav as any).replace('Auth');
+                }
               }
             } catch (error) {
-              console.error('Error al cerrar sesión:', error);
               Alert.alert('Error', 'No se pudo cerrar sesión. Por favor intenta nuevamente.');
             }
           },
@@ -224,7 +198,6 @@ export default function ProfileScreen() {
               try {
                 await fetchProfile();
               } catch (fetchError) {
-                console.error('Error al recargar perfil:', fetchError);
               }
             }, 1500);
           } else {
@@ -324,19 +297,8 @@ export default function ProfileScreen() {
                   uri: getAvatarUrl(profile.avatarUrl),
                 }}
                 style={styles.avatar}
-                onError={(error) => {
-                  console.error('❌ Error al cargar imagen de perfil:', {
-                    profileId: profile.id,
-                    avatarUrl: profile.avatarUrl,
-                    error: error.nativeEvent?.error || error,
-                  });
-                }}
-                onLoad={() => {
-                  console.log('✅ Imagen de perfil cargada:', {
-                    profileId: profile.id,
-                    avatarUrl: profile.avatarUrl,
-                  });
-                }}
+                onError={() => {}}
+                onLoad={() => {}}
               />
               <View style={styles.avatarOverlay}>
                 <Text style={styles.avatarOverlayText}>📷</Text>
@@ -415,7 +377,6 @@ export default function ProfileScreen() {
                 variant="tertiary"
                 onPress={() => {
                   setIsEditing(false);
-                  // reset form
                   setForm({
                     firstName: profile.firstName || '',
                     lastName: profile.lastName || '',

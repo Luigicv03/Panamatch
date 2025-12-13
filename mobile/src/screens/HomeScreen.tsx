@@ -37,28 +37,18 @@ export default function HomeScreen() {
   const { profile, fetchProfile, isLoading: isLoadingProfile, profileNotFound } = useProfileStore();
   const [profileLoadAttempted, setProfileLoadAttempted] = useState(false);
 
-  // Cargar perfil si no existe (solo una vez)
   useEffect(() => {
     if (!profile && !profileLoadAttempted && !isLoadingProfile) {
       setProfileLoadAttempted(true);
-      fetchProfile().catch((err: any) => {
-        console.error('Error al cargar perfil:', err);
-        // El error ya fue manejado en el store
-      });
+      fetchProfile().catch(() => {});
     }
   }, [profile, profileLoadAttempted, isLoadingProfile, fetchProfile]);
 
-  // Obtener candidatos
   const { data, isLoading, refetch, error: candidatesError } = useQuery({
     queryKey: ['swipeCandidates'],
     queryFn: async () => {
-      try {
-        const candidates = await swipeService.getCandidates();
-        return candidates || [];
-      } catch (err: any) {
-        console.error('Error al obtener candidatos:', err);
-        throw err;
-      }
+      const candidates = await swipeService.getCandidates();
+      return candidates || [];
     },
     enabled: !!profile,
     retry: 1,
@@ -71,7 +61,6 @@ export default function HomeScreen() {
     }
   }, [data]);
 
-  // Asegurar que el índice siempre esté dentro del rango de candidatos
   useEffect(() => {
     if (candidates.length === 0) {
       setCurrentIndex(0);
@@ -85,13 +74,14 @@ export default function HomeScreen() {
   const likeMutation = useMutation({
     mutationFn: (profileId: string) => swipeService.likeCandidate(profileId),
     onSuccess: (response) => {
+      const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
+      setCandidates(newCandidates);
+      setCurrentIndex(0);
+      
       if (response.match) {
         setCurrentMatch(response.match);
         setShowMatchModal(true);
       } else {
-        const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
-        setCandidates(newCandidates);
-        setCurrentIndex(0);
         if (newCandidates.length === 0) {
           refetch();
         }
@@ -102,16 +92,13 @@ export default function HomeScreen() {
     },
   });
 
-  // Mutación para dar dislike
   const dislikeMutation = useMutation({
     mutationFn: (profileId: string) => swipeService.dislikeCandidate(profileId),
     onSuccess: () => {
-      // Remover candidato actual
       const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
       setCandidates(newCandidates);
-      setCurrentIndex(0); // Resetear índice
+      setCurrentIndex(0);
       if (newCandidates.length === 0) {
-        // Cargar más candidatos si no hay más
         refetch();
       }
     },
@@ -132,10 +119,8 @@ export default function HomeScreen() {
     }
   };
 
-  // Nuevo: pasar/omitir sin rechazar (ciclo infinito hasta que se rechace)
   const handleSwipeUp = () => {
     if (candidates.length === 0) return;
-    // avanzar al siguiente candidato en modo circular
     setCurrentIndex((prev) => (prev + 1) % candidates.length);
   };
 
@@ -164,19 +149,32 @@ export default function HomeScreen() {
 
   const handleGoToChat = () => {
     setShowMatchModal(false);
-    if (currentMatch?.chat) {
-      if (currentMatch.chat) {
+    
+    const newCandidates = candidates.filter((p) => p.id !== candidates[currentIndex]?.id);
+    setCandidates(newCandidates);
+    setCurrentIndex(0);
+    setCurrentMatch(null);
+    
+    if (newCandidates.length === 0) {
+      refetch();
+    }
+    
+    if (currentMatch?.chat?.id) {
+      const otherUserId = currentMatch.user1?.id === profile?.id
+        ? currentMatch.user2?.id || ''
+        : currentMatch.user1?.id || '';
+      
+      if (otherUserId) {
         navigation.navigate('ChatDetail', {
           chatId: currentMatch.chat.id,
-          userId: currentMatch.user1?.id === profile?.id
-            ? currentMatch.user2?.id || ''
-            : currentMatch.user1?.id || '',
+          userId: otherUserId,
         });
       }
+    } else {
+      navigation.navigate('Chats');
     }
   };
 
-  // Redirigir a Profile si el perfil no existe
   useEffect(() => {
     if (profileNotFound && !profile) {
       navigation.navigate('Profile');
@@ -220,7 +218,7 @@ export default function HomeScreen() {
           <Text style={styles.loadingText}>Cargando candidatos...</Text>
           {candidatesError && (
             <Text style={[styles.loadingText, { color: colors.dislike, marginTop: 8 }]}>
-              Error: {candidatesError instanceof Error ? candidatesError.message : 'Error desconocido'}
+              Error: {String(candidatesError)}
             </Text>
           )}
         </View>

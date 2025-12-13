@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -17,12 +17,10 @@ const Stack = createStackNavigator<AuthStackParamList>();
 export default function AuthNavigator() {
   const { isAuthenticated } = useAuthStore();
   const { profileNotFound } = useProfileStore();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
 
-  // Si el usuario está autenticado pero no tiene perfil, redirigir a RegisterStep1
   useEffect(() => {
     if (isAuthenticated && profileNotFound) {
-      // @ts-ignore - navigation type issue
       navigation.reset({
         index: 0,
         routes: [{ name: 'RegisterStep1' }],

@@ -20,35 +20,27 @@ export default function AppNavigator() {
     checkAuth();
   }, [checkAuth]);
 
-  // Verificar perfil cuando el usuario esté autenticado
   useEffect(() => {
     if (isAuthenticated && !authLoading && !profileChecked) {
       fetchProfile()
         .then(() => {
           setProfileChecked(true);
         })
-        .catch((error) => {
-          console.log('Error al cargar perfil al iniciar app:', error);
-          setProfileChecked(true); // Marcar como verificado incluso si falla
+        .catch(() => {
+          setProfileChecked(true);
         });
     }
   }, [isAuthenticated, authLoading, profileChecked, fetchProfile]);
 
-  // Re-verificar perfil cuando cambia (por ejemplo, después de crearlo)
   useEffect(() => {
     if (isAuthenticated && profileChecked && !profile && !profileNotFound) {
-      // Si el perfil cambió y ahora existe, actualizar
       fetchProfile().catch(() => {});
     }
   }, [isAuthenticated, profileChecked, profile, profileNotFound, fetchProfile]);
 
-  // Detectar cuando se crea un perfil y redirigir a Main
   useEffect(() => {
     if (isAuthenticated && profileChecked && profile && !profileNotFound) {
-      // Si hay perfil y estamos en Auth, redirigir a Main
-      // Esto se ejecutará cuando se cree el perfil desde RegisterStep4
       const timer = setTimeout(() => {
-        // Forzar re-render del navigator para cambiar la ruta inicial
         setShowSplash(false);
       }, 500);
       return () => clearTimeout(timer);
@@ -56,7 +48,6 @@ export default function AppNavigator() {
   }, [isAuthenticated, profileChecked, profile, profileNotFound]);
 
   useEffect(() => {
-    // Ocultar splash después de verificar autenticación y perfil
     if (!authLoading && (!isAuthenticated || profileChecked)) {
       const timer = setTimeout(() => {
         setShowSplash(false);
@@ -66,18 +57,15 @@ export default function AppNavigator() {
   }, [authLoading, isAuthenticated, profileChecked]);
 
   if (authLoading || showSplash || (isAuthenticated && !profileChecked)) {
-    // Mostrar splash mientras se verifica la autenticación y perfil
     return <SplashScreen />;
   }
 
-  // Determinar la ruta inicial basada en autenticación y perfil
   const getInitialRoute = () => {
     if (!isAuthenticated) {
       return 'Auth';
     }
-    // Si está autenticado pero no tiene perfil, debe completar el registro
     if (profileNotFound || !profile) {
-      return 'Auth'; // Mantener en Auth para mostrar RegisterStep1
+      return 'Auth';
     }
     return 'Main';
   };
@@ -85,7 +73,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        key={profile ? 'main' : 'auth'} // Forzar re-render cuando cambia el perfil
+        key={profile ? 'main' : 'auth'}
         initialRouteName={getInitialRoute()}
         screenOptions={{
           headerShown: false,

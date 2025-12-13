@@ -12,16 +12,16 @@ import { colors } from '../constants/colors';
 import imageService from '../services/imageService';
 import profileService from '../services/profileService';
 
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp as RNRouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../types';
 
 type NavigationProp = StackNavigationProp<AuthStackParamList, 'RegisterStep2'>;
-type RouteProp = RouteProp<AuthStackParamList, 'RegisterStep2'>;
+type RoutePropType = RNRouteProp<AuthStackParamList, 'RegisterStep2'>;
 
 export default function RegisterStep2Screen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProp>();
+  const route = useRoute<RoutePropType>();
   const [avatarUri, setAvatarUri] = useState<string | null>(route.params?.avatarUri || null);
   const [isUploading, setIsUploading] = useState(false);
 

@@ -4,9 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
-  ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
 
 import { useNavigation } from '@react-navigation/native';
@@ -18,20 +17,17 @@ type NavigationProp = StackNavigationProp<AuthStackParamList, 'Welcome'>;
 export default function WelcomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Sección superior con imágenes */}
-      <View style={styles.imageSection}>
-        <Image
-          source={{
-            uri: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800',
-          }}
-          style={styles.backgroundImage}
-        />
-        <View style={styles.gradientOverlay} />
-      </View>
-
-      {/* Sección inferior con botones */}
+    <LinearGradient
+      colors={[colors.gradientStart, colors.gradientMiddle, colors.gradientEnd]}
+      style={styles.container}
+    >
       <View style={styles.actionsSection}>
+        <View style={styles.welcomeTextContainer}>
+          <Text style={styles.welcomeText}>
+            Hola, Bienvenido a PanaMatch, espero puedas encontrar muchos panas
+          </Text>
+        </View>
+        
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => navigation.navigate('Register')}
@@ -46,45 +42,30 @@ export default function WelcomeScreen() {
           <Text style={styles.secondaryButtonText}>Iniciar sesión</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  imageSection: {
-    flex: 1,
-    minHeight: 400,
-    position: 'relative',
-  },
-  backgroundImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: colors.background,
   },
   actionsSection: {
-    backgroundColor: colors.background,
-    padding: 24,
-    paddingTop: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  welcomeTextContainer: {
+    marginBottom: 40,
+    paddingHorizontal: 20,
+  },
+  welcomeText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.white,
+    textAlign: 'center',
+    lineHeight: 28,
   },
   primaryButton: {
     backgroundColor: colors.primary,

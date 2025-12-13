@@ -49,8 +49,11 @@ class AuthService {
   }
 
   async getProfile(): Promise<Profile> {
-    const response = await api.get<Profile>('/users/me');
-    return response.data.profile!;
+    const response = await api.get<User>('/users/me');
+    if (!response.data.profile) {
+      throw new Error('Profile not found');
+    }
+    return response.data.profile;
   }
 
   async updateEmail(email: string): Promise<AuthResponse> {

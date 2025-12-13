@@ -80,8 +80,7 @@ app.get('/test-gcs', (req, res) => {
     credentialsJSONLength: process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON?.length || 0,
     credentialsFileLength: creds.length,
     credentialsFileIsActualFile: isFile,
-    credentialsFilePreview: creds.substring(0, 200),
-    credentialsFileStartsWith: creds.substring(0, 10),
+    credentialsLoaded: storageService.isUsingGCS(),
   });
 });
 

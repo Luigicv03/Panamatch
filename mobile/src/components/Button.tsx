@@ -29,7 +29,7 @@ export default function Button({
   textStyle,
 }: ButtonProps) {
   const getButtonStyle = () => {
-    const baseStyle = [styles.button, styles[`${variant}Button`]];
+    const baseStyle: ViewStyle[] = [styles.button, styles[`${variant}Button`]];
     if (disabled || loading) {
       baseStyle.push(styles.buttonDisabled);
     }
@@ -40,7 +40,7 @@ export default function Button({
   };
 
   const getTextStyle = () => {
-    const baseStyle = [styles.buttonText, styles[`${variant}Text`]];
+    const baseStyle: TextStyle[] = [styles.buttonText, styles[`${variant}Text`]];
     if (textStyle) {
       baseStyle.push(textStyle);
     }

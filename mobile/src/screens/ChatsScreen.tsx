@@ -50,25 +50,21 @@ export default function ChatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
 
-  // Conectar Socket al montar
   useEffect(() => {
     socketService.connect();
 
-    // Escuchar actualizaciones de chats
     socketService.onChatUpdated(() => {
       queryClient.invalidateQueries({ queryKey: ['chats'] });
     });
 
     return () => {
-      // No desconectar aquí, puede estar en uso en otras pantallas
     };
   }, []);
 
-  // Obtener lista de chats
   const { data: chats, isLoading, refetch } = useQuery({
     queryKey: ['chats'],
     queryFn: () => chatService.getChats(),
-    refetchInterval: 30000, // Refrescar cada 30 segundos
+    refetchInterval: 30000,
   });
 
   const onRefresh = async () => {
@@ -87,7 +83,6 @@ export default function ChatsScreen() {
       if (diffInHours < 24) {
         return format(date, 'HH:mm');
       } else if (diffInHours < 168) {
-        // Menos de una semana
         return format(date, 'EEE');
       } else {
         return format(date, 'dd/MM/yyyy');

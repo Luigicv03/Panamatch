@@ -28,15 +28,12 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const profile = await profileService.getCurrentProfile();
       set({ profile, isLoading: false, profileNotFound: false });
     } catch (error: any) {
-      console.error('Error al obtener perfil:', error);
-      // Si el error es 404, significa que el perfil no existe aún
       if (error?.response?.status === 404) {
-        console.log('Perfil no encontrado. El usuario necesita crear su perfil.');
         set({ profile: null, isLoading: false, profileNotFound: true });
-      } else {
-        set({ profile: null, isLoading: false, profileNotFound: false });
+        return;
       }
-      throw error; // Re-lanzar para que los componentes puedan manejarlo
+      set({ profile: null, isLoading: false, profileNotFound: false });
+      throw error;
     }
   },
 
@@ -47,7 +44,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const interests = await profileService.getInterests();
       set({ interests });
     } catch (error) {
-      console.error('Error al obtener intereses:', error);
     }
   },
 
@@ -59,7 +55,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       const updatedProfile = await profileService.updateProfile(data as any);
       set({ profile: updatedProfile });
     } catch (error) {
-      console.error('Error al actualizar perfil:', error);
       throw error;
     }
   },

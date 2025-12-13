@@ -89,7 +89,6 @@ export default function SwipeCard({
       translateY.value = event.translationY * 0.3;
       scale.value = 1 - Math.abs(event.translationX) / 1000;
 
-      // Opacidad de overlay
       if (event.translationX < -50) {
         opacity.value = 0.95;
       } else if (event.translationX > 50) {
@@ -100,22 +99,18 @@ export default function SwipeCard({
     })
     .onEnd((event) => {
       if (event.translationX < -SWIPE_THRESHOLD) {
-        // Swipe izquierda (dislike)
         translateX.value = withSpring(-SCREEN_WIDTH * 2);
         opacity.value = withSpring(0);
         runOnJS(onSwipeLeft)();
       } else if (event.translationX > SWIPE_THRESHOLD) {
-        // Swipe derecha (like)
         translateX.value = withSpring(SCREEN_WIDTH * 2);
         opacity.value = withSpring(0);
         runOnJS(onSwipeRight)();
       } else if (event.translationY < -SWIPE_THRESHOLD && onSwipeUp) {
-        // Swipe arriba
         translateY.value = withSpring(-SCREEN_WIDTH * 2);
         opacity.value = withSpring(0);
         runOnJS(onSwipeUp)();
       } else {
-        // Volver a posición inicial
         translateX.value = withSpring(0);
         translateY.value = withSpring(0);
         scale.value = withSpring(1);
@@ -126,24 +121,17 @@ export default function SwipeCard({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.card, animatedStyle]}>
-        {/* Overlay de dislike (izquierda) */}
         <Animated.View style={[styles.overlay, styles.dislikeOverlay, leftOverlayStyle]}>
           <Text style={styles.overlayText}>RECHAZAR</Text>
         </Animated.View>
-
-        {/* Overlay de like (derecha) */}
         <Animated.View style={[styles.overlay, styles.likeOverlay, rightOverlayStyle]}>
           <Text style={styles.overlayText}>ACEPTAR</Text>
         </Animated.View>
-
-        {/* Imagen de perfil */}
         <Image
           source={{ uri: getAvatarUrl(profile.avatarUrl) }}
           style={styles.image}
           resizeMode="cover"
         />
-
-        {/* Información del perfil */}
         <View style={styles.infoContainer}>
           <View style={styles.nameContainer}>
             <Text style={styles.name}>

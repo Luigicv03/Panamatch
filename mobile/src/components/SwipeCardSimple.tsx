@@ -33,7 +33,6 @@ export default function SwipeCard({
   const [pan] = useState(new RNAnimated.ValueXY());
   const [opacity] = useState(new RNAnimated.Value(1));
 
-  // Resetear posición y opacidad cuando cambia el perfil
   React.useEffect(() => {
     pan.setValue({ x: 0, y: 0 });
     opacity.setValue(1);
@@ -58,16 +57,13 @@ export default function SwipeCard({
     onPanResponderMove: (evt, gestureState) => {
       pan.setValue({ x: gestureState.dx, y: gestureState.dy * 0.3 });
       
-      // Opacidad basada en movimiento
       const absX = Math.abs(gestureState.dx);
       const opacityValue = 1 - absX / 500;
       opacity.setValue(Math.max(0.5, opacityValue));
     },
     onPanResponderRelease: (evt, gestureState) => {
       if (Math.abs(gestureState.dx) > SWIPE_THRESHOLD) {
-        // Swipe detectado
         if (gestureState.dx > 0) {
-          // Swipe derecha (like)
           RNAnimated.parallel([
             RNAnimated.timing(pan, {
               toValue: { x: SCREEN_WIDTH * 2, y: gestureState.dy },
@@ -83,7 +79,6 @@ export default function SwipeCard({
             onSwipeRight();
           });
         } else {
-          // Swipe izquierda (dislike)
           RNAnimated.parallel([
             RNAnimated.timing(pan, {
               toValue: { x: -SCREEN_WIDTH * 2, y: gestureState.dy },
@@ -100,7 +95,6 @@ export default function SwipeCard({
           });
         }
       } else {
-        // Volver a posición inicial
         RNAnimated.parallel([
           RNAnimated.spring(pan, {
             toValue: { x: 0, y: 0 },
@@ -147,7 +141,6 @@ export default function SwipeCard({
       style={[styles.card, animatedStyle]}
       {...panResponder.panHandlers}
     >
-      {/* Overlay de dislike (izquierda) */}
       <RNAnimated.View
         style={[
           styles.overlay,
@@ -157,8 +150,6 @@ export default function SwipeCard({
       >
         <Text style={styles.overlayText}>RECHAZAR</Text>
       </RNAnimated.View>
-
-      {/* Overlay de like (derecha) */}
       <RNAnimated.View
         style={[
           styles.overlay,
@@ -168,8 +159,6 @@ export default function SwipeCard({
       >
         <Text style={styles.overlayText}>ACEPTAR</Text>
       </RNAnimated.View>
-
-      {/* Imagen de perfil */}
       <Image
         source={{
           uri: getAvatarUrl(profile.avatarUrl),
@@ -177,8 +166,6 @@ export default function SwipeCard({
         style={styles.image}
         resizeMode="cover"
       />
-
-      {/* Información del perfil */}
       <View style={styles.infoContainer}>
         <View style={styles.nameContainer}>
           <Text style={styles.name}>

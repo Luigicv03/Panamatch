@@ -35,7 +35,6 @@ class ProfileService {
   }
 
   async uploadAvatar(imageUri: string): Promise<{ avatarUrl: string }> {
-    // Usar el servicio de imágenes para subir el avatar
     const result = await imageService.uploadImage(imageUri, 'profile');
     return { avatarUrl: result.url };
   }

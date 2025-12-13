@@ -11,16 +11,16 @@ import { colors } from '../constants/colors';
 import { useProfileStore } from '../store/profileStore';
 import { Interest } from '../types';
 
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp as RNRouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../types';
 
 type NavigationProp = StackNavigationProp<AuthStackParamList, 'RegisterStep3'>;
-type RouteProp = RouteProp<AuthStackParamList, 'RegisterStep3'>;
+type RoutePropType = RNRouteProp<AuthStackParamList, 'RegisterStep3'>;
 
 export default function RegisterStep3Screen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProp>();
+  const route = useRoute<RoutePropType>();
   const { interests, fetchInterests } = useProfileStore();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 

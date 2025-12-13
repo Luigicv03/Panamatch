@@ -31,10 +31,8 @@ export default function MatchScreen({
 
   useEffect(() => {
     if (visible && match) {
-      // Vibración al hacer match
       Vibration.vibrate([200, 100, 200]);
 
-      // Animación de entrada
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
