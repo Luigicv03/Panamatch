@@ -218,62 +218,29 @@ export default function ChatDetailScreen() {
       if (error.message !== 'User canceled image picker') {
         Alert.alert('Error', error.message || 'Error al tomar foto');
       }
+    } finally {
       setIsUploadingImage(false);
     }
   };
 
-  // Función auxiliar para enviar imagen al chat
   const sendImageToChat = async (imageUri: string) => {
     try {
-      console.log('Iniciando subida de imagen para chat...', { chatId, imageUri: imageUri.substring(0, 50) + '...' });
-      
-      // Verificar conectividad del backend antes de intentar subir
-      try {
-        const healthCheck = await fetch(`${config.apiUrl}/health`, {
-          method: 'GET',
-        });
-        if (!healthCheck.ok) {
-          throw new Error('Backend no responde correctamente');
-        }
-        console.log('Backend está accesible');
-      } catch (healthError: any) {
-        console.error('Backend no accesible:', healthError);
-        Alert.alert(
-          'Error de conexión',
-          `No se puede conectar al backend (${config.apiUrl}). ` +
-          `Verifica que el backend esté corriendo en el puerto 3000 y accesible desde tu red.`
-        );
-        setIsUploadingImage(false);
-        return;
+      const healthCheck = await fetch(`${config.apiUrl}/health`, {
+        method: 'GET',
+      });
+      if (!healthCheck.ok) {
+        throw new Error('Backend no responde correctamente');
       }
-      
-      // Subir imagen
-      const uploadResult = await imageService.uploadImage(imageUri, 'message');
-      console.log('Imagen subida exitosamente:', uploadResult);
-      
-      // Enviar mensaje con mediaId
-      sendMessageMutation.mutate({ mediaId: uploadResult.id });
-      
-      // El setIsUploadingImage se manejará en el finally del handleSendImage
-    } catch (error: any) {
-      console.error('Error al subir imagen en chat:', error);
-      
-      // Determinar el tipo de error y mostrar mensaje apropiado
-      let errorMessage = 'Error al subir imagen';
-      
-      if (error.isNetworkError || error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
-        errorMessage = `Error de conexión. Backend: ${config.apiUrl}. ` +
-          `Verifica que el backend esté corriendo en el puerto 3000 y accesible desde tu red.`;
-      } else if (error.message) {
-        errorMessage = error.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      
-      Alert.alert('Error al subir imagen', errorMessage);
-      setIsUploadingImage(false);
-      throw error;
+    } catch (healthError: any) {
+      Alert.alert(
+        'Error de conexión',
+        `No se puede conectar al backend (${config.apiUrl}). Verifica que el backend esté corriendo.`
+      );
+      throw healthError;
     }
+    
+    const uploadResult = await imageService.uploadImage(imageUri, 'message');
+    await sendMessageMutation.mutateAsync({ mediaId: uploadResult.id });
   };
 
   const handleSend = () => {

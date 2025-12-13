@@ -77,7 +77,7 @@ export default function MatchScreen({
         >
           <Text style={styles.title}>¡Hiciste un match!</Text>
           <Text style={styles.subtitle}>
-            Ahora pueden chatear 🎉🇻🇪
+            Ahora pueden chatear
           </Text>
 
           <View style={styles.imagesContainer}>
