@@ -4,7 +4,6 @@ import { RequestWithUser } from '../types';
 
 const prisma = new PrismaClient();
 
-// Obtener lista de chats del usuario
 export const getChats = async (
   req: RequestWithUser,
   res: Response
@@ -24,7 +23,6 @@ export const getChats = async (
       return;
     }
 
-    // Obtener chats
     const chats = await prisma.chat.findMany({
       where: {
         OR: [
@@ -70,7 +68,6 @@ export const getChats = async (
       },
     });
 
-    // Formatear respuesta
     const formattedChats = chats.map((chat) => {
       const otherUser =
         chat.user1Id === currentProfile.id ? chat.user2 : chat.user1;
@@ -96,7 +93,7 @@ export const getChats = async (
           : null,
         lastMessageAt: chat.lastMessageAt,
         createdAt: chat.createdAt,
-        unreadCount: 0, // TODO: Calcular mensajes no leídos
+        unreadCount: 0,
       };
     });
 
@@ -107,7 +104,6 @@ export const getChats = async (
   }
 };
 
-// Obtener mensajes de un chat
 export const getChatMessages = async (
   req: Request,
   res: Response
@@ -118,7 +114,6 @@ export const getChatMessages = async (
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    // Verificar que el chat existe y el usuario tiene acceso
     const chat = await prisma.chat.findUnique({
       where: { id },
     });
@@ -128,8 +123,6 @@ export const getChatMessages = async (
       return;
     }
 
-    // Obtener mensajes ordenados de más antiguos a más recientes
-    // Para paginación: página 1 = mensajes más antiguos, páginas siguientes = mensajes más recientes
     const messages = await prisma.message.findMany({
       where: { chatId: id },
       include: {
@@ -143,13 +136,12 @@ export const getChatMessages = async (
         },
       },
       orderBy: {
-        createdAt: 'asc', // Orden cronológico: más antiguos primero
+        createdAt: 'asc',
       },
       take: limit,
       skip,
     });
 
-    // Obtener el media para cada mensaje que tenga mediaId
     const messagesWithMedia = await Promise.all(
       messages.map(async (message) => {
         let media = null;
@@ -166,7 +158,7 @@ export const getChatMessages = async (
     );
 
     res.json({
-      messages: messagesWithMedia, // Mensajes con media incluido
+      messages: messagesWithMedia,
       hasMore: messages.length === limit,
       page,
     });
@@ -176,7 +168,6 @@ export const getChatMessages = async (
   }
 };
 
-// Enviar mensaje (fallback para cuando no hay WebSocket)
 export const sendMessage = async (
   req: RequestWithUser,
   res: Response
@@ -187,7 +178,7 @@ export const sendMessage = async (
       return;
     }
 
-    const { id } = req.params; // chatId
+    const { id } = req.params;
     const { content, mediaId } = req.body;
 
     const currentProfile = await prisma.profile.findUnique({
@@ -199,7 +190,6 @@ export const sendMessage = async (
       return;
     }
 
-    // Verificar que el chat existe y el usuario tiene acceso
     const chat = await prisma.chat.findUnique({
       where: { id },
     });
@@ -214,7 +204,6 @@ export const sendMessage = async (
       return;
     }
 
-    // Crear mensaje
     const message = await prisma.message.create({
       data: {
         chatId: id,
@@ -236,7 +225,6 @@ export const sendMessage = async (
       },
     });
 
-    // Actualizar último mensaje del chat
     await prisma.chat.update({
       where: { id },
       data: {

@@ -4,7 +4,6 @@ import { RequestWithUser } from '../types';
 
 const prisma = new PrismaClient();
 
-// Obtener candidatos para swipe
 export const getCandidates = async (
   req: RequestWithUser,
   res: Response
@@ -15,7 +14,6 @@ export const getCandidates = async (
       return;
     }
 
-    // Obtener perfil del usuario actual
     const currentProfile = await prisma.profile.findUnique({
       where: { userId: req.user.id },
     });
@@ -25,14 +23,12 @@ export const getCandidates = async (
       return;
     }
 
-    // Obtener IDs de usuarios ya swipados (likes y dislikes)
     const swipedProfiles = await prisma.swipe.findMany({
       where: { swipedBy: currentProfile.id },
       select: { swipedOn: true },
     });
     const swipedIds = swipedProfiles.map((s) => s.swipedOn);
 
-    // Obtener IDs de usuarios que ya hicieron match
     const matches = await prisma.match.findMany({
       where: {
         OR: [
@@ -49,17 +45,14 @@ export const getCandidates = async (
       m.user1Id === currentProfile.id ? [m.user2Id] : [m.user1Id]
     );
 
-    // IDs a excluir
     const excludeIds = [...swipedIds, ...matchedIds, currentProfile.id];
 
-    // Obtener candidatos (misma ciudad o ciudades cercanas)
-    // Por ahora, filtramos por misma ciudad. En producción, agregar lógica de distancia
     let candidates = await prisma.profile.findMany({
       where: {
         AND: [
           { id: { notIn: excludeIds } },
-          { city: currentProfile.city }, // Misma ciudad
-          { userId: { not: req.user.id } }, // No el mismo usuario
+          { city: currentProfile.city },
+          { userId: { not: req.user.id } },
         ],
       },
       include: {
@@ -69,13 +62,12 @@ export const getCandidates = async (
           },
         },
       },
-      take: 10, // Limitar resultados
+      take: 10,
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    // Si no hay suficientes candidatos en la misma ciudad, expandir búsqueda
     if (candidates.length < 5) {
       const additionalCandidates = await prisma.profile.findMany({
         where: {
@@ -112,7 +104,6 @@ export const getCandidates = async (
   }
 };
 
-// Dar like a un candidato
 export const likeCandidate = async (
   req: RequestWithUser,
   res: Response
@@ -123,7 +114,7 @@ export const likeCandidate = async (
       return;
     }
 
-    const { id } = req.params; // ID del perfil al que se le da like
+    const { id } = req.params;
     const currentProfile = await prisma.profile.findUnique({
       where: { userId: req.user.id },
     });
@@ -133,7 +124,6 @@ export const likeCandidate = async (
       return;
     }
 
-    // Verificar que el candidato existe
     const candidateProfile = await prisma.profile.findUnique({
       where: { id },
     });
@@ -143,7 +133,6 @@ export const likeCandidate = async (
       return;
     }
 
-    // Verificar que no se haya swipado antes
     const existingSwipe = await prisma.swipe.findUnique({
       where: {
         swipedBy_swipedOn: {
@@ -158,7 +147,6 @@ export const likeCandidate = async (
       return;
     }
 
-    // Crear swipe
     await prisma.swipe.create({
       data: {
         swipedBy: currentProfile.id,
@@ -167,7 +155,6 @@ export const likeCandidate = async (
       },
     });
 
-    // Verificar si hay match (el otro usuario ya dio like)
     const mutualLike = await prisma.swipe.findUnique({
       where: {
         swipedBy_swipedOn: {
@@ -179,7 +166,6 @@ export const likeCandidate = async (
 
     let match = null;
     if (mutualLike && mutualLike.action === 'like') {
-      // Crear match
       match = await prisma.match.create({
         data: {
           user1Id: currentProfile.id,
@@ -207,7 +193,6 @@ export const likeCandidate = async (
         },
       });
 
-      // Crear chat para el match
       const chat = await prisma.chat.create({
         data: {
           matchId: match.id,
@@ -216,7 +201,6 @@ export const likeCandidate = async (
         },
       });
 
-      // Incluir el chat en el match
       match.chat = chat;
     }
 
@@ -243,7 +227,6 @@ export const likeCandidate = async (
   }
 };
 
-// Dar dislike a un candidato
 export const dislikeCandidate = async (
   req: RequestWithUser,
   res: Response
@@ -254,7 +237,7 @@ export const dislikeCandidate = async (
       return;
     }
 
-    const { id } = req.params; // ID del perfil al que se le da dislike
+    const { id } = req.params;
     const currentProfile = await prisma.profile.findUnique({
       where: { userId: req.user.id },
     });
@@ -264,7 +247,6 @@ export const dislikeCandidate = async (
       return;
     }
 
-    // Verificar que el candidato existe
     const candidateProfile = await prisma.profile.findUnique({
       where: { id },
     });
@@ -274,7 +256,6 @@ export const dislikeCandidate = async (
       return;
     }
 
-    // Verificar que no se haya swipado antes
     const existingSwipe = await prisma.swipe.findUnique({
       where: {
         swipedBy_swipedOn: {
@@ -289,7 +270,6 @@ export const dislikeCandidate = async (
       return;
     }
 
-    // Crear swipe de dislike
     await prisma.swipe.create({
       data: {
         swipedBy: currentProfile.id,
@@ -305,7 +285,6 @@ export const dislikeCandidate = async (
   }
 };
 
-// Obtener matches del usuario
 export const getMatches = async (
   req: RequestWithUser,
   res: Response
@@ -325,7 +304,6 @@ export const getMatches = async (
       return;
     }
 
-    // Obtener matches
     const matches = await prisma.match.findMany({
       where: {
         OR: [
@@ -368,7 +346,6 @@ export const getMatches = async (
       },
     });
 
-    // Formatear respuesta
     const formattedMatches = matches.map((match) => {
       const otherUser =
         match.user1Id === currentProfile.id ? match.user2 : match.user1;

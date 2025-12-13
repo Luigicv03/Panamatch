@@ -9,7 +9,6 @@ import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
 router.get('/candidates', getCandidates);

@@ -11,7 +11,6 @@ interface SocketWithUser extends Socket {
 }
 
 export const setupSocketIO = (io: Server) => {
-  // Middleware de autenticación para Socket.IO
   io.use(async (socket: SocketWithUser, next) => {
     try {
       const token = socket.handshake.auth.token;
@@ -22,7 +21,6 @@ export const setupSocketIO = (io: Server) => {
       const decoded = verifyAccessToken(token);
       socket.userId = decoded.id;
 
-      // Obtener profileId
       const profile = await prisma.profile.findUnique({
         where: { userId: decoded.id },
         select: { id: true },
@@ -40,7 +38,6 @@ export const setupSocketIO = (io: Server) => {
 
   io.on('connection', (socket: SocketWithUser) => {
 
-    // Unirse a salas de chats del usuario
     socket.on('join:chats', async () => {
       if (!socket.profileId) return;
 
@@ -62,14 +59,12 @@ export const setupSocketIO = (io: Server) => {
       }
     });
 
-    // Unirse a un chat específico
     socket.on('join:chat', async (chatId: string) => {
       if (!socket.profileId) {
         console.error('Error: socket.profileId no está definido al unirse al chat');
         return;
       }
       
-      // Verificar que el usuario tiene acceso al chat
       try {
         const chat = await prisma.chat.findUnique({
           where: { id: chatId },
@@ -99,7 +94,6 @@ export const setupSocketIO = (io: Server) => {
       }
     });
 
-    // Enviar mensaje
     socket.on('message:send', async (data: { chatId: string; content: string; mediaId?: string }) => {
       if (!socket.profileId) {
         console.error('Error: socket.profileId no está definido');
@@ -107,7 +101,6 @@ export const setupSocketIO = (io: Server) => {
         return;
       }
       
-      // Verificar que el socket está en la sala del chat
       const rooms = Array.from(socket.rooms);
       const chatRoom = `chat:${data.chatId}`;
       if (!rooms.includes(chatRoom)) {
@@ -120,7 +113,6 @@ export const setupSocketIO = (io: Server) => {
       }
 
       try {
-        // VALIDACIÓN CRÍTICA: Verificar que el chat existe y pertenece al usuario autenticado
         const chat = await prisma.chat.findUnique({
           where: { id: data.chatId },
           select: {
@@ -135,7 +127,6 @@ export const setupSocketIO = (io: Server) => {
           return;
         }
 
-        // Verificar que el usuario autenticado es parte del chat
         if (chat.user1Id !== socket.profileId && chat.user2Id !== socket.profileId) {
           console.error('Error: Usuario no autorizado para este chat', {
             chatId: data.chatId,
@@ -147,17 +138,15 @@ export const setupSocketIO = (io: Server) => {
           return;
         }
 
-        // Validar que el mensaje tenga contenido o media
         if (!data.content && !data.mediaId) {
           socket.emit('message:error', { error: 'El mensaje debe tener contenido o una imagen' });
           return;
         }
 
-        // Crear mensaje en la BD con el senderId correcto del socket autenticado
         const message = await prisma.message.create({
           data: {
             chatId: data.chatId,
-            senderId: socket.profileId, // Asegurar que usa el profileId del socket autenticado
+            senderId: socket.profileId,
             content: data.content || null,
             mediaId: data.mediaId || null,
             read: false,
@@ -174,15 +163,12 @@ export const setupSocketIO = (io: Server) => {
           },
         });
 
-        // Obtener el media si existe
         let media = null;
         if (data.mediaId) {
-          // Buscar el media por ID
           media = await prisma.media.findUnique({
             where: { id: data.mediaId },
           });
           
-          // Actualizar el media para vincularlo con el mensaje
           if (media) {
             await prisma.media.update({
               where: { id: data.mediaId },
@@ -191,8 +177,6 @@ export const setupSocketIO = (io: Server) => {
           }
         }
 
-        // Construir el mensaje completo con sender y media
-        // IMPORTANTE: Asegurar que el objeto media esté correctamente serializado
         const messageWithMedia = {
           id: message.id,
           chatId: message.chatId,
@@ -214,7 +198,6 @@ export const setupSocketIO = (io: Server) => {
           } : null,
         };
 
-        // Actualizar último mensaje del chat
         await prisma.chat.update({
           where: { id: data.chatId },
           data: {
@@ -223,10 +206,7 @@ export const setupSocketIO = (io: Server) => {
           },
         });
 
-        // Emitir mensaje a todos en el chat (con media incluido)
         io.to(`chat:${data.chatId}`).emit('message:received', messageWithMedia);
-
-        // Actualizar lista de chats para ambos usuarios
         io.emit('chat:updated', { chatId: data.chatId });
       } catch (error: any) {
         console.error('Error al enviar mensaje:', error);
@@ -234,7 +214,6 @@ export const setupSocketIO = (io: Server) => {
       }
     });
 
-    // Indicador de escritura
     socket.on('typing:start', (data: { chatId: string }) => {
       socket.to(`chat:${data.chatId}`).emit('typing:start', {
         userId: socket.userId,
@@ -249,7 +228,6 @@ export const setupSocketIO = (io: Server) => {
       });
     });
 
-    // Marcar mensajes como leídos
     socket.on('messages:read', async (data: { chatId: string; messageIds: string[] }) => {
       if (!socket.profileId) return;
 
@@ -258,7 +236,7 @@ export const setupSocketIO = (io: Server) => {
           where: {
             id: { in: data.messageIds },
             chatId: data.chatId,
-            senderId: { not: socket.profileId }, // Solo marcar mensajes del otro usuario
+            senderId: { not: socket.profileId },
             read: false,
           },
           data: {
@@ -266,7 +244,6 @@ export const setupSocketIO = (io: Server) => {
           },
         });
 
-        // Notificar al otro usuario
         socket.to(`chat:${data.chatId}`).emit('messages:read', {
           messageIds: data.messageIds,
         });
@@ -275,9 +252,7 @@ export const setupSocketIO = (io: Server) => {
       }
     });
 
-    // Desconexión
     socket.on('disconnect', () => {
-      // Usuario desconectado
     });
   });
 };

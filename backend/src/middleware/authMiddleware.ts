@@ -15,7 +15,7 @@ export const authMiddleware = (
       return;
     }
 
-    const token = authHeader.substring(7); // Remover "Bearer "
+    const token = authHeader.substring(7);
 
     try {
       const decoded = verifyAccessToken(token);

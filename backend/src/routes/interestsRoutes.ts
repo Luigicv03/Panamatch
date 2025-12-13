@@ -4,7 +4,6 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Obtener todos los intereses disponibles
 router.get('/', async (req, res) => {
   try {
     const interests = await prisma.interest.findMany({

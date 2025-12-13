@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-// Esquemas de validación con Zod
-
 export const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
@@ -20,7 +18,6 @@ export const updateProfileSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido'),
   lastName: z.string().min(1, 'El apellido es requerido'),
   dateOfBirth: z.string().refine((val) => {
-    // Validar que sea una fecha válida en formato ISO (YYYY-MM-DD)
     const date = new Date(val);
     return !isNaN(date.getTime()) && val.match(/^\d{4}-\d{2}-\d{2}$/);
   }, {

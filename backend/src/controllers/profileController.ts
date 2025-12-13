@@ -54,11 +54,9 @@ export const createProfile = async (
       return;
     }
 
-    // Validar datos
     const validatedData = updateProfileSchema.parse(req.body);
     const { interests, ...profileData } = validatedData as any;
 
-    // Verificar si el perfil ya existe
     const existingProfile = await prisma.profile.findUnique({
       where: { userId: req.user.id },
     });
@@ -68,12 +66,9 @@ export const createProfile = async (
       return;
     }
 
-    // Validar y convertir fecha de nacimiento
     let birthDate: Date;
     if (typeof validatedData.dateOfBirth === 'string') {
-      // Intentar parsear la fecha
       birthDate = new Date(validatedData.dateOfBirth);
-      // Verificar que la fecha sea válida
       if (isNaN(birthDate.getTime())) {
         console.error('Fecha inválida recibida:', validatedData.dateOfBirth);
         res.status(400).json({ error: 'Fecha de nacimiento inválida. Use formato YYYY-MM-DD' });
@@ -84,7 +79,6 @@ export const createProfile = async (
       return;
     }
 
-    // Calcular edad mínima (18 años)
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -94,7 +88,6 @@ export const createProfile = async (
       return;
     }
 
-    // Crear perfil
     const profile = await prisma.profile.create({
       data: {
         userId: req.user.id,
@@ -121,7 +114,6 @@ export const createProfile = async (
       },
     });
 
-    // Formatear respuesta
     const formattedProfile = {
       ...profile,
       interests: profile.interests.map((ui) => ui.interest),
@@ -148,11 +140,9 @@ export const updateProfile = async (
       return;
     }
 
-    // Validar datos
     const validatedData = updateProfileSchema.parse(req.body);
     const { interests, ...profileData } = validatedData as any;
 
-    // Verificar que el perfil existe
     const existingProfile = await prisma.profile.findUnique({
       where: { userId: req.user.id },
     });
@@ -162,7 +152,6 @@ export const updateProfile = async (
       return;
     }
 
-    // Actualizar perfil
     const profile = await prisma.profile.update({
       where: { userId: req.user.id },
       data: {
@@ -190,7 +179,6 @@ export const updateProfile = async (
       },
     });
 
-    // Formatear respuesta
     const formattedProfile = {
       ...profile,
       interests: profile.interests.map((ui) => ui.interest),
@@ -224,8 +212,6 @@ export const uploadAvatar = async (
       return;
     }
 
-    // Usar el endpoint de media para subir
-    // Esta función ahora se maneja en mediaRoutes
     res.status(501).json({ error: 'Use POST /media/upload with type=profile' });
   } catch (error) {
     console.error('Error al subir avatar:', error);
@@ -256,7 +242,6 @@ export const getPublicProfile = async (
       return;
     }
 
-    // Formatear respuesta (sin información sensible)
     const formattedProfile = {
       id: profile.id,
       firstName: profile.firstName,

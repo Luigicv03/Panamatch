@@ -1,4 +1,3 @@
-// Tipos TypeScript para el backend
 import { Request } from 'express';
 
 export interface UserPayload {

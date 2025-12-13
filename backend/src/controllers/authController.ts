@@ -9,10 +9,8 @@ const prisma = new PrismaClient();
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Validar datos
     const validatedData = registerSchema.parse(req.body);
 
-    // Verificar si el usuario ya existe
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email },
     });
@@ -22,10 +20,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Hashear contraseña
     const hashedPassword = await hashPassword(validatedData.password);
 
-    // Crear usuario
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
@@ -33,7 +29,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Generar tokens
     const accessToken = generateAccessToken({ id: user.id, email: user.email });
     const refreshToken = generateRefreshToken({ id: user.id, email: user.email });
 
@@ -58,10 +53,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Validar datos
     const validatedData = loginSchema.parse(req.body);
 
-    // Buscar usuario
     const user = await prisma.user.findUnique({
       where: { email: validatedData.email },
       include: { profile: { include: { interests: { include: { interest: true } } } } },
@@ -72,7 +65,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Verificar contraseña
     const isPasswordValid = await comparePassword(validatedData.password, user.password);
 
     if (!isPasswordValid) {
@@ -80,11 +72,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generar tokens
     const accessToken = generateAccessToken({ id: user.id, email: user.email });
     const refreshToken = generateRefreshToken({ id: user.id, email: user.email });
 
-    // Formatear respuesta del usuario
     const userResponse = {
       id: user.id,
       email: user.email,
@@ -114,8 +104,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const logout = async (req: RequestWithUser, res: Response): Promise<void> => {
   try {
-    // Aquí podrías invalidar el refresh token en la BD si lo guardas
-    // Por ahora solo devolvemos éxito
     res.json({ message: 'Sesión cerrada exitosamente' });
   } catch (error) {
     console.error('Error en logout:', error);
@@ -125,13 +113,10 @@ export const logout = async (req: RequestWithUser, res: Response): Promise<void>
 
 export const refresh = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Validar datos
     const validatedData = refreshTokenSchema.parse(req.body);
 
-    // Verificar refresh token
     const decoded = verifyRefreshToken(validatedData.refreshToken);
 
-    // Verificar que el usuario aún existe
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });
@@ -141,7 +126,6 @@ export const refresh = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generar nuevo access token
     const accessToken = generateAccessToken({ id: user.id, email: user.email });
 
     res.json({ accessToken });
@@ -166,10 +150,8 @@ export const updateEmail = async (req: RequestWithUser, res: Response): Promise<
       return;
     }
 
-    // Validar datos
     const validatedData = updateEmailSchema.parse(req.body);
 
-    // Verificar si el nuevo email ya está en uso por otro usuario
     const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email },
     });
@@ -179,7 +161,6 @@ export const updateEmail = async (req: RequestWithUser, res: Response): Promise<
       return;
     }
 
-    // Verificar que el usuario existe
     const currentUser = await prisma.user.findUnique({
       where: { id: req.user.id },
     });
@@ -189,7 +170,6 @@ export const updateEmail = async (req: RequestWithUser, res: Response): Promise<
       return;
     }
 
-    // Si el email es el mismo, no hacer nada
     if (currentUser.email === validatedData.email) {
       res.json({ 
         message: 'El email no ha cambiado',
@@ -201,7 +181,6 @@ export const updateEmail = async (req: RequestWithUser, res: Response): Promise<
       return;
     }
 
-    // Actualizar email
     const updatedUser = await prisma.user.update({
       where: { id: req.user.id },
       data: {
@@ -209,7 +188,6 @@ export const updateEmail = async (req: RequestWithUser, res: Response): Promise<
       },
     });
 
-    // Generar nuevos tokens con el email actualizado
     const accessToken = generateAccessToken({ id: updatedUser.id, email: updatedUser.email });
     const refreshToken = generateRefreshToken({ id: updatedUser.id, email: updatedUser.email });
 

@@ -11,19 +11,13 @@ import { storageService } from '../services/storageService';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Middleware para parsear el body antes de multer (para obtener el tipo)
-// Usamos express.urlencoded para parsear los campos del form-data
 const parseFormDataFields = (req: any, res: any, next: any) => {
-  // Solo parsear si es multipart/form-data y aún no está parseado
   if (req.headers['content-type']?.includes('multipart/form-data') && !req.body) {
-    // Usar busboy o simplemente esperar a que multer lo haga
-    // Por ahora, intentaremos leer el tipo después de que multer procese
     return next();
   }
   next();
 };
 
-// Subir imagen genérica
 router.post('/upload', authMiddleware, parseFormDataFields, (req, res, next) => {
   upload.single('image')(req, res, (err) => {
     if (err) {
@@ -67,7 +61,6 @@ router.post('/upload', authMiddleware, parseFormDataFields, (req, res, next) => 
 
     const multerFilePath = req.file.path;
     
-    // Esperar un momento para asegurar que el archivo se haya escrito
     await new Promise(resolve => setTimeout(resolve, 100));
     
     if (!fs.existsSync(multerFilePath)) {
@@ -83,12 +76,10 @@ router.post('/upload', authMiddleware, parseFormDataFields, (req, res, next) => 
     try {
       imageUrl = await storageService.uploadFile(fileBuffer, filename, imageType);
       
-      // Eliminar archivo temporal si usamos almacenamiento local
       if (!storageService.isUsingGCS()) {
         try {
           fs.unlinkSync(multerFilePath);
         } catch (unlinkError) {
-          // Ignorar error al eliminar
         }
       }
     } catch (uploadError: any) {
@@ -98,7 +89,6 @@ router.post('/upload', authMiddleware, parseFormDataFields, (req, res, next) => 
           fs.unlinkSync(multerFilePath);
         }
       } catch (unlinkError) {
-        // Ignorar error al eliminar
       }
       return res.status(500).json({ 
         error: 'Error al subir el archivo',
@@ -146,7 +136,6 @@ router.post('/upload', authMiddleware, parseFormDataFields, (req, res, next) => 
   }
 });
 
-// Servir archivos estáticos (solo para desarrollo local)
 router.get('/:subDir/:filename', (req, res) => {
   const { subDir, filename } = req.params;
   const uploadPath = process.env.IMAGE_STORAGE_PATH || './uploads';
